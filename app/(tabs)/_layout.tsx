@@ -1,21 +1,29 @@
-// template
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
 import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
-import { SymbolView } from "expo-symbols";
 import { Platform, StyleSheet, useColorScheme } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 
-import Colors from "@/constants/colors";
-
-//IMPORTANT: iOS 26 Exists, feel free to use NativeTabs for native tabs with liquid glass support.
 function NativeTabLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>Home</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="chat">
+        <Icon sf={{ default: "bubble.left", selected: "bubble.left.fill" }} />
+        <Label>Chat</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="events">
+        <Icon sf={{ default: "calendar", selected: "calendar" }} />
+        <Label>Events</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="profile">
+        <Icon sf={{ default: "person", selected: "person.fill" }} />
+        <Label>My Profile</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -28,17 +36,26 @@ function ClassicTabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.light.tint,
-        tabBarInactiveTintColor: Colors.light.tabIconDefault,
-        headerShown: true,
+        tabBarActiveTintColor: "#171717",
+        tabBarInactiveTintColor: "#b0b0b0",
+        headerShown: false,
         tabBarStyle: {
-          position: "absolute",
+          position: "absolute" as const,
           backgroundColor: Platform.select({
             ios: "transparent",
             android: isDark ? "#000" : "#fff",
+            web: "#fff",
           }),
-          borderTopWidth: 0,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: "#e5e5e5",
           elevation: 0,
+          height: Platform.OS === "web" ? 84 : 60,
+          paddingBottom: Platform.OS === "web" ? 34 : 6,
+          paddingTop: 6,
+        },
+        tabBarLabelStyle: {
+          fontFamily: "Inter_400Regular",
+          fontSize: 11,
         },
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
@@ -54,8 +71,51 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => (
-            <SymbolView name="house" tintColor={color} size={24} />
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: "Chat",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "chatbubble" : "chatbubble-outline"}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="events"
+        options={{
+          title: "Events",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "calendar" : "calendar-outline"}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "My Profile",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "person" : "person-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />
