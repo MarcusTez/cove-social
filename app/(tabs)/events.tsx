@@ -7,18 +7,24 @@ export default function EventsScreen() {
 
   return (
     <View
-      style={[
-        styles.container,
-        { paddingTop: insets.top + webTopInset },
-      ]}
+      style={[styles.container, { paddingTop: insets.top + webTopInset }]}
     >
       <View style={styles.header}>
         <Text style={styles.title}>Events</Text>
       </View>
-      <View style={styles.emptyState}>
-        <Text style={styles.emptyText}>
-          Upcoming events will appear here
-        </Text>
+
+      <View style={styles.content}>
+        <View style={styles.textContainer}>
+          <Text style={styles.heading}>Events are coming soon</Text>
+          <Text style={styles.body}>
+            We're curating a selection of gallery openings, film nights, talks,
+            dinners, and cultural moments happening across the city.
+          </Text>
+          <Text style={styles.body}>
+            Soon you'll be able to discover interesting things to do and find
+            people from Cove to go with.
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -40,16 +46,29 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: "#171717",
   },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
+  content: {
+    paddingHorizontal: 20,
+    paddingVertical: 48,
     alignItems: "center",
-    paddingHorizontal: 40,
   },
-  emptyText: {
+  textContainer: {
+    maxWidth: 320,
+    alignItems: "center",
+  },
+  heading: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 24,
+    color: "#171717",
+    textAlign: "center",
+    marginBottom: 16,
+    lineHeight: 32,
+  },
+  body: {
     fontFamily: "Inter_400Regular",
     fontSize: 16,
     color: "#737373",
     textAlign: "center",
+    lineHeight: 24,
+    marginTop: 8,
   },
 });
