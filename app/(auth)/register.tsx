@@ -52,8 +52,8 @@ export default function RegisterScreen() {
   const [showGenderPicker, setShowGenderPicker] = useState(false);
 
   const handleSubmit = async () => {
-    if (!email.trim()) {
-      Alert.alert("Missing fields", "Please enter your email address.");
+    if (!email.trim() || !city || !gender) {
+      Alert.alert("Missing fields", "Please fill in all fields.");
       return;
     }
 
@@ -66,8 +66,8 @@ export default function RegisterScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim(),
-          ...(city ? { city } : {}),
-          ...(gender ? { gender } : {}),
+          city,
+          gender,
         }),
       });
 
