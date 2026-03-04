@@ -24,12 +24,15 @@ app/
   (tabs)/
     _layout.tsx         # Tab navigation layout (Home, Chat, Events, My Profile)
     index.tsx           # Home tab - introductions screen
-    chat.tsx            # Chat tab - placeholder
+    chat.tsx            # Chat tab - conversation list
     events.tsx          # Events tab - placeholder
     profile.tsx         # My Profile tab - placeholder
+  chat/
+    [id].tsx            # Chat thread (full screen, no tab bar)
 components/
   CoveSplash.tsx        # Animated splash screen
   ProfileCard.tsx       # Profile introduction card component
+  BlockModal.tsx        # Block user confirmation modal
   ErrorBoundary.tsx     # Error boundary wrapper
   ErrorFallback.tsx     # Error fallback UI
   KeyboardAwareScrollViewCompat.tsx
@@ -50,9 +53,18 @@ shared/
 2. Auth screens (login/register) - forms ready for backend API connection
 3. Main app with 4-tab navigation:
    - **Home**: Weekly introductions with profile cards (or empty "being prepared" state)
-   - **Chat**: Conversations (placeholder, awaiting backend)
+   - **Chat**: Conversation list with unread badges → chat thread with message bubbles
    - **Events**: Events listing (placeholder, awaiting backend)
    - **My Profile**: User profile (placeholder, awaiting backend)
+
+## Chat Feature
+
+- Chat list shows conversations with avatars, last message, timestamps, unread badges
+- Chat thread displays messages as bubbles (dark = sent, light = received) with inverted FlatList
+- 3-dot menu in thread header provides: View intro profile, Block user, Report user
+- Block modal with cancel/confirm actions
+- Message composer with text input and send button
+- Currently uses mock data; messaging mechanism to be built later
 
 ## Design System
 
@@ -64,7 +76,9 @@ shared/
 - Tags (interests): #f5f5f5 background
 - Match reason tags: #171717 background, white text
 - Buttons: #171717 background, #fafafa text
-- Border radius: 12px (buttons/inputs), 16px (cards), 20px (tags)
+- Destructive: #dc2626 (block/report actions)
+- Chat bubbles: #171717 (sent), #f5f5f5 (received)
+- Border radius: 12px (buttons/inputs), 16px (cards), 18px (chat bubbles), 20px (tags), 24px (pill buttons)
 
 ## Workflows
 
