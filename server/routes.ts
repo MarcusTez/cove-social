@@ -46,6 +46,7 @@ async function proxyToCove(req: Request, res: Response) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  app.post("/api/mobile/waitlist", proxyToCove);
   app.post("/api/mobile/auth/login", proxyToCove);
   app.post("/api/mobile/auth/refresh", proxyToCove);
   app.post("/api/mobile/auth/logout", proxyToCove);

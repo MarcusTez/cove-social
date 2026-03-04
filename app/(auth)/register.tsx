@@ -9,32 +9,107 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
+  Modal,
+  FlatList,
+  Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { fetch } from "expo/fetch";
+import { Ionicons } from "@expo/vector-icons";
+
+const CITIES = [
+  "London",
+  "New York",
+  "San Francisco",
+  "Sydney",
+  "Toronto",
+  "Dubai",
+  "Amsterdam",
+  "Lisbon",
+  "Barcelona",
+];
+
+const GENDERS = ["Woman", "Man", "Non-binary", "Prefer not to say"];
+
+function getProxyBase(): string {
+  const host = process.env.EXPO_PUBLIC_DOMAIN;
+  if (!host) throw new Error("EXPO_PUBLIC_DOMAIN is not set");
+  return `https://${host}/api/mobile`;
+}
 
 export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [confirmEmail, setConfirmEmail] = useState("");
+  const [city, setCity] = useState("");
+  const [gender, setGender] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [showCityPicker, setShowCityPicker] = useState(false);
+  const [showGenderPicker, setShowGenderPicker] = useState(false);
 
-  const handleSubmit = () => {
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !confirmEmail.trim()) {
-      Alert.alert("Missing fields", "Please fill in all fields.");
+  const handleSubmit = async () => {
+    if (!email.trim()) {
+      Alert.alert("Missing fields", "Please enter your email address.");
       return;
     }
-    if (email.trim().toLowerCase() !== confirmEmail.trim().toLowerCase()) {
-      Alert.alert("Email mismatch", "The email addresses do not match.");
-      return;
+
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch(`${getProxyBase()}/waitlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          ...(city ? { city } : {}),
+          ...(gender ? { gender } : {}),
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        const message = errorData?.error || "Something went wrong. Please try again.";
+        setErrorMessage(message);
+        return;
+      }
+
+      setSubmitted(true);
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-    Alert.alert("Coming soon", "Registration will be connected to the backend API.");
   };
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
+
+  if (submitted) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + webTopInset }]}>
+        <View style={styles.successContent}>
+          <Ionicons name="checkmark-circle-outline" size={64} color="#171717" />
+          <Text style={styles.successTitle}>You're on the list</Text>
+          <Text style={styles.successMessage}>
+            We've sent a verification email to {email.trim()}. Please check your inbox and click the link to confirm.
+          </Text>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+            testID="back-to-login"
+          >
+            <Text style={styles.buttonText}>Back to login</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -66,37 +141,15 @@ export default function RegisterScreen() {
 
           <Text style={styles.title}>Join Cove</Text>
           <Text style={styles.subtitle}>
-            Complete the below to receive your invite code:
+            Join our waitlist and we'll send you an invite when a spot opens up.
           </Text>
 
           <View style={styles.form}>
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>First name</Text>
-              <TextInput
-                style={styles.input}
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholder="Alex"
-                placeholderTextColor="#a3a3a3"
-                autoCapitalize="words"
-                autoCorrect={false}
-                testID="register-first-name"
-              />
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Last name</Text>
-              <TextInput
-                style={styles.input}
-                value={lastName}
-                onChangeText={setLastName}
-                placeholder="Smith"
-                placeholderTextColor="#a3a3a3"
-                autoCapitalize="words"
-                autoCorrect={false}
-                testID="register-last-name"
-              />
-            </View>
+            {errorMessage ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            ) : null}
 
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Email</Text>
@@ -109,36 +162,59 @@ export default function RegisterScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                editable={!isSubmitting}
                 testID="register-email"
               />
             </View>
 
             <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Confirm email</Text>
-              <TextInput
-                style={styles.input}
-                value={confirmEmail}
-                onChangeText={setConfirmEmail}
-                placeholder="your@email.com"
-                placeholderTextColor="#a3a3a3"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                testID="register-confirm-email"
-              />
+              <Text style={styles.label}>City</Text>
+              <TouchableOpacity
+                style={styles.pickerButton}
+                onPress={() => setShowCityPicker(true)}
+                activeOpacity={0.7}
+                disabled={isSubmitting}
+                testID="register-city"
+              >
+                <Text style={city ? styles.pickerText : styles.pickerPlaceholder}>
+                  {city || "Select your city"}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#a3a3a3" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.label}>Gender</Text>
+              <TouchableOpacity
+                style={styles.pickerButton}
+                onPress={() => setShowGenderPicker(true)}
+                activeOpacity={0.7}
+                disabled={isSubmitting}
+                testID="register-gender"
+              >
+                <Text style={gender ? styles.pickerText : styles.pickerPlaceholder}>
+                  {gender || "Select your gender"}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#a3a3a3" />
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, isSubmitting && styles.buttonDisabled]}
               onPress={handleSubmit}
               activeOpacity={0.8}
+              disabled={isSubmitting}
               testID="register-button"
             >
-              <Text style={styles.buttonText}>Submit</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color="#fafafa" />
+              ) : (
+                <Text style={styles.buttonText}>Join waitlist</Text>
+              )}
             </TouchableOpacity>
 
             <Text style={styles.termsText}>
-              By creating an account, you agree to our{" "}
+              By joining, you agree to our{" "}
               <Text style={styles.termsLink}>Terms of Service</Text> and{" "}
               <Text style={styles.termsLink}>Privacy Policy</Text>
             </Text>
@@ -155,6 +231,70 @@ export default function RegisterScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showCityPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCityPicker(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowCityPicker(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select city</Text>
+            <FlatList
+              data={CITIES}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalOption, city === item && styles.modalOptionSelected]}
+                  onPress={() => {
+                    setCity(item);
+                    setShowCityPicker(false);
+                  }}
+                  testID={`city-option-${item.toLowerCase().replace(/\s/g, "-")}`}
+                >
+                  <Text style={[styles.modalOptionText, city === item && styles.modalOptionTextSelected]}>
+                    {item}
+                  </Text>
+                  {city === item ? <Ionicons name="checkmark" size={20} color="#171717" /> : null}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={showGenderPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowGenderPicker(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowGenderPicker(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select gender</Text>
+            <FlatList
+              data={GENDERS}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalOption, gender === item && styles.modalOptionSelected]}
+                  onPress={() => {
+                    setGender(item);
+                    setShowGenderPicker(false);
+                  }}
+                  testID={`gender-option-${item.toLowerCase().replace(/\s/g, "-")}`}
+                >
+                  <Text style={[styles.modalOptionText, gender === item && styles.modalOptionTextSelected]}>
+                    {item}
+                  </Text>
+                  {gender === item ? <Ionicons name="checkmark" size={20} color="#171717" /> : null}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -229,12 +369,49 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     backgroundColor: "#ffffff",
   },
+  pickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: "#ffffff",
+  },
+  pickerText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 16,
+    color: "#171717",
+  },
+  pickerPlaceholder: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 16,
+    color: "#a3a3a3",
+  },
+  errorContainer: {
+    backgroundColor: "#fef2f2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  errorText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#dc2626",
+  },
   button: {
     backgroundColor: "#171717",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
     marginTop: 4,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonText: {
     fontFamily: "Inter_500Medium",
@@ -249,7 +426,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   termsLink: {
-    textDecorationLine: "underline",
+    textDecorationLine: "underline" as const,
     color: "#737373",
   },
   switchRow: {
@@ -268,6 +445,65 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: "#171717",
-    textDecorationLine: "underline",
+    textDecorationLine: "underline" as const,
+  },
+  successContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+    gap: 16,
+  },
+  successTitle: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 28,
+    color: "#171717",
+    textAlign: "center",
+    letterSpacing: -0.3,
+  },
+  successMessage: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 16,
+    color: "#737373",
+    textAlign: "center",
+    lineHeight: 24,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
+    maxHeight: "60%",
+  },
+  modalTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 18,
+    color: "#171717",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+  },
+  modalOptionSelected: {
+    backgroundColor: "#f5f5f5",
+  },
+  modalOptionText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 16,
+    color: "#171717",
+  },
+  modalOptionTextSelected: {
+    fontFamily: "Inter_500Medium",
   },
 });

@@ -22,7 +22,7 @@ app/
     _layout.tsx         # Auth stack layout
     index.tsx           # Redirects to login
     login.tsx           # Login screen (email + password) — connected to Cove API
-    register.tsx        # Register screen (first name, last name, email, confirm email)
+    register.tsx        # Waitlist screen (email, city dropdown, gender) — connected to Cove API
   (tabs)/
     _layout.tsx         # Tab navigation layout (Home, Chat, Events, My Profile)
     index.tsx           # Home tab - introductions screen
