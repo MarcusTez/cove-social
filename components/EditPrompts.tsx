@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 interface Prompt {
+  id?: string;
   question: string;
   answer: string;
 }
@@ -51,7 +52,7 @@ export function EditPrompts({
 
   const handleSelectPrompt = (index: number, question: string) => {
     const newPrompts = [...prompts];
-    newPrompts[index] = { question, answer: newPrompts[index]?.answer || "" };
+    newPrompts[index] = { id: newPrompts[index]?.id, question, answer: newPrompts[index]?.answer || "" };
     setPrompts(newPrompts);
     setOpenDropdown(null);
   };

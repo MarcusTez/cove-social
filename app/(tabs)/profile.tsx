@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,24 +7,74 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/query-client";
+import { useAuth } from "@/lib/auth";
 import { EditProfileSection } from "@/components/EditProfileSection";
 import { EditPrompts } from "@/components/EditPrompts";
 
-interface Prompt {
-  question: string;
-  answer: string;
+interface ApiPhoto {
+  id: string;
+  userId: string;
+  photoData: string;
+  displayOrder: number;
+  createdAt: string;
 }
 
-interface ProfileData {
-  photos: (string | null)[];
-  name: string;
-  age: number;
-  location: string;
+interface ApiPrompt {
+  id: string;
+  userId: string;
+  promptQuestion: string;
+  promptAnswer: string;
+  displayOrder: number;
+  createdAt: string;
+}
+
+interface ApiProfile {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
   gender: string;
-  prompts: Prompt[];
+  genderSelfDescribe: string | null;
+  londonAreas: string[];
+  personalityWords: string[];
+  regularRituals: string[];
+  thisWeekActivities: string[];
+  valuesLifestyle: string[];
+  lifestylePreferences: string[];
+  upcomingPlans: string[];
+  socialWeekStyle: string;
+  relationshipStatus: string;
+  lifeStageCareer: string[];
+  lifeStageSituation: string[];
+  lifeStageGoals: string[];
+  friendshipValues: string[];
+  friendshipPractical: string[];
+  problemReasons: string[];
+  instagramHandle: string;
+  linkedinUrl: string;
+  commitmentLevel: string;
+  selectedPlan: string;
+  subscriptionStatus: string;
+  accountStatus: string;
+  matchingOptIn: boolean;
+  inviteCode: string;
+  createdAt: string;
+  photos: ApiPhoto[];
+  prompts: ApiPrompt[];
+}
+
+interface DisplayProfile {
+  photos: (string | null)[];
+  photoIds: (string | null)[];
+  name: string;
+  gender: string;
+  prompts: { id?: string; question: string; answer: string }[];
   thisWeek: string[];
   regularRituals: string[];
   whyHere: string[];
@@ -41,36 +91,144 @@ interface ProfileData {
   linkedin: string;
 }
 
-const INITIAL_PROFILE: ProfileData = {
-  photos: [
-    "https://images.unsplash.com/photo-1762522921456-cdfe882d36c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx5b3VuZyUyMHByb2Zlc3Npb25hbCUyMHdvbWFuJTIwcG9ydHJhaXQlMjBzbWlsaW5nfGVufDF8fHx8MTc3MjQ1NzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080",
-    "https://images.unsplash.com/photo-1763259405177-0121bf79da0d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3b21hbiUyMHByb2Zlc3Npb25hbCUyMGxpZmVzdHlsZSUyMG91dGRvb3IlMjBwb3J0cmFpdHxlbnwxfHx8fDE3NzI0NTk5MTF8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    null,
-  ],
-  name: "Lena",
-  age: 28,
-  location: "London",
-  gender: "Woman",
-  prompts: [
-    { question: "This week I'm probably\u2026", answer: "Exploring new coffee shops in Shoreditch or planning my next weekend escape" },
-    { question: "Favourite song right now", answer: "Anything by Phoebe Bridgers on repeat" },
-    { question: "A small ritual I care about\u2026", answer: "Sunday morning yoga followed by a long walk through Victoria Park" },
-  ],
-  thisWeek: ["Dinner out", "Running", "Comedy nights", "Pilates/Yoga", "Park walks"],
-  regularRituals: ["Yoga", "Running", "Cooking", "Networking", "Museums", "Coffee culture"],
-  whyHere: ["I want friends who share my interests and ambitions", "My social circle is great, but I want to expand it"],
-  londonAreas: ["Shoreditch", "Soho", "Clapham"],
-  values: ["Personal growth is non-negotiable", "I need culture like I need air", "Quality time over large groups"],
-  lifestyle: ["I love discovering hidden gems in London", "Weekend getaways over staying home"],
-  upcomingPlans: ["Gigs/concerts", "UK weekend away", "Weekly dinner crew"],
-  idealWeek: "2\u20133 solid plans, rest is chill time",
-  describeWords: ["Ambitious", "Curious", "Warm", "Authentic", "Creative"],
-  relationshipStatus: "Single and dating",
-  whereAtInLife: ["Climbing the corporate ladder", "Building a social life", "Building healthier habits"],
-  friendshipMatters: ["Ambitious/driven energy", "Wellness-focused lifestyle", "Up for spontaneous plans"],
-  instagram: "@lena.creates",
-  linkedin: "https://www.linkedin.com/in/lena-creates/",
-};
+function mapApiToDisplay(api: ApiProfile): DisplayProfile {
+  const photoSlots: (string | null)[] = [];
+  const photoIdSlots: (string | null)[] = [];
+  const sorted = [...(api.photos || [])].sort((a, b) => a.displayOrder - b.displayOrder);
+  for (let i = 0; i < 3; i++) {
+    if (sorted[i]) {
+      photoSlots.push(sorted[i].photoData);
+      photoIdSlots.push(sorted[i].id);
+    } else {
+      photoSlots.push(null);
+      photoIdSlots.push(null);
+    }
+  }
+
+  return {
+    photos: photoSlots,
+    photoIds: photoIdSlots,
+    name: [api.firstName, api.lastName].filter(Boolean).join(" "),
+    gender: api.gender || "",
+    prompts: (api.prompts || [])
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((p) => ({ id: p.id, question: p.promptQuestion, answer: p.promptAnswer })),
+    thisWeek: api.thisWeekActivities || [],
+    regularRituals: api.regularRituals || [],
+    whyHere: api.problemReasons || [],
+    londonAreas: api.londonAreas || [],
+    values: api.valuesLifestyle || [],
+    lifestyle: api.lifestylePreferences || [],
+    upcomingPlans: api.upcomingPlans || [],
+    idealWeek: api.socialWeekStyle || "",
+    describeWords: api.personalityWords || [],
+    relationshipStatus: api.relationshipStatus || "",
+    whereAtInLife: [
+      ...(api.lifeStageCareer || []),
+      ...(api.lifeStageSituation || []),
+      ...(api.lifeStageGoals || []),
+    ],
+    friendshipMatters: [
+      ...(api.friendshipValues || []),
+      ...(api.friendshipPractical || []),
+    ],
+    instagram: api.instagramHandle || "",
+    linkedin: api.linkedinUrl || "",
+  };
+}
+
+const CAREER_OPTIONS_SET = new Set([
+  "Climbing the corporate ladder", "Founder/building my own thing", "Freelance/portfolio life",
+  "Career break/sabbatical", "Just started a new job/industry", "Prefer not to say",
+]);
+const SITUATION_OPTIONS_SET = new Set([
+  "New to London", "Moved neighborhoods recently", "Friend group shifted",
+  "Coming out of a breakup", "Fresh out of a long relationship", "Just moved back to London",
+]);
+const GOALS_OPTIONS_SET = new Set([
+  "Building a career", "Building a business", "Building a social life",
+  "Building healthier habits", "Building creative projects", "Just want to have more fun",
+]);
+const VALUES_FRIENDSHIP_SET = new Set([
+  "Ambitious/driven energy", "Wellness-focused lifestyle", "Politically progressive",
+  "Environmentally conscious", "Spiritual/open-minded", "LGBTQ+ friendly",
+]);
+const PRACTICAL_FRIENDSHIP_SET = new Set([
+  "Up for spontaneous plans", "Prefers planned-ahead hangouts", "Doesn't smoke",
+  "Drinks socially", "Doesn't drink",
+]);
+
+type DisplayField = keyof DisplayProfile;
+
+const ALL_WHERE_AT_SET = new Set([...CAREER_OPTIONS_SET, ...SITUATION_OPTIONS_SET, ...GOALS_OPTIONS_SET]);
+const ALL_FRIENDSHIP_SET = new Set([...VALUES_FRIENDSHIP_SET, ...PRACTICAL_FRIENDSHIP_SET]);
+
+function mapFieldToApiBody(field: DisplayField, value: string | string[], apiProfile?: ApiProfile | null): Record<string, unknown> {
+  switch (field) {
+    case "name": {
+      const parts = (value as string).trim().split(/\s+/);
+      return { firstName: parts[0] || "", lastName: parts.slice(1).join(" ") || "" };
+    }
+    case "thisWeek":
+      return { thisWeekActivities: value };
+    case "whyHere":
+      return { problemReasons: value };
+    case "values":
+      return { valuesLifestyle: value };
+    case "lifestyle":
+      return { lifestylePreferences: value };
+    case "idealWeek":
+      return { socialWeekStyle: value };
+    case "describeWords":
+      return { personalityWords: value };
+    case "instagram":
+      return { instagramHandle: value };
+    case "linkedin":
+      return { linkedinUrl: value };
+    case "whereAtInLife": {
+      const items = value as string[];
+      const career = items.filter((s) => CAREER_OPTIONS_SET.has(s));
+      const situation = items.filter((s) => SITUATION_OPTIONS_SET.has(s));
+      const goals = items.filter((s) => GOALS_OPTIONS_SET.has(s));
+      const unknownItems = items.filter((s) => !ALL_WHERE_AT_SET.has(s));
+      if (apiProfile) {
+        const origCareerUnknown = (apiProfile.lifeStageCareer || []).filter((s) => !CAREER_OPTIONS_SET.has(s));
+        const origSitUnknown = (apiProfile.lifeStageSituation || []).filter((s) => !SITUATION_OPTIONS_SET.has(s));
+        const origGoalsUnknown = (apiProfile.lifeStageGoals || []).filter((s) => !GOALS_OPTIONS_SET.has(s));
+        career.push(...origCareerUnknown.filter((s) => !career.includes(s)));
+        situation.push(...origSitUnknown.filter((s) => !situation.includes(s)));
+        goals.push(...origGoalsUnknown.filter((s) => !goals.includes(s)));
+      }
+      if (unknownItems.length > 0) {
+        goals.push(...unknownItems);
+      }
+      return { lifeStageCareer: career, lifeStageSituation: situation, lifeStageGoals: goals };
+    }
+    case "friendshipMatters": {
+      const items = value as string[];
+      const values = items.filter((s) => VALUES_FRIENDSHIP_SET.has(s));
+      const practical = items.filter((s) => PRACTICAL_FRIENDSHIP_SET.has(s));
+      const unknownItems = items.filter((s) => !ALL_FRIENDSHIP_SET.has(s));
+      if (apiProfile) {
+        const origValUnknown = (apiProfile.friendshipValues || []).filter((s) => !VALUES_FRIENDSHIP_SET.has(s));
+        const origPracUnknown = (apiProfile.friendshipPractical || []).filter((s) => !PRACTICAL_FRIENDSHIP_SET.has(s));
+        values.push(...origValUnknown.filter((s) => !values.includes(s)));
+        practical.push(...origPracUnknown.filter((s) => !practical.includes(s)));
+      }
+      if (unknownItems.length > 0) {
+        values.push(...unknownItems);
+      }
+      return { friendshipValues: values, friendshipPractical: practical };
+    }
+    case "regularRituals":
+    case "londonAreas":
+    case "upcomingPlans":
+    case "relationshipStatus":
+      return { [field]: value };
+    default:
+      return {};
+  }
+}
 
 const THIS_WEEK_OPTIONS = [
   "Drinks", "Dinner out", "Coffee catchups", "Going out/dancing", "Hosting at home",
@@ -183,8 +341,6 @@ const RELATIONSHIP_OPTIONS = [
   "It's complicated",
 ];
 
-const GENDER_OPTIONS = ["Woman", "Man", "Non-binary", "Prefer to self-describe"];
-
 const WHERE_AT_OPTIONS = [
   "Climbing the corporate ladder",
   "Founder/building my own thing",
@@ -242,7 +398,7 @@ type EditingSection = {
   title: string;
   type: "multi-select" | "single-select" | "text";
   options: string[];
-  field: keyof ProfileData;
+  field: DisplayField;
   maxSelections?: number;
   note?: string;
 } | null;
@@ -271,6 +427,9 @@ function SectionHeader({
 }
 
 function TagList({ items }: { items: string[] }) {
+  if (!items || items.length === 0) {
+    return <Text style={styles.emptyText}>Not set</Text>;
+  }
   return (
     <View style={styles.tagsContainer}>
       {items.map((item, index) => (
@@ -283,33 +442,130 @@ function TagList({ items }: { items: string[] }) {
 }
 
 function TextItem({ text }: { text: string }) {
+  if (!text) return <Text style={styles.emptyText}>Not set</Text>;
   return <Text style={styles.itemText}>{text}</Text>;
 }
 
 export default function MyProfileScreen() {
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
-  const [profile, setProfile] = useState<ProfileData>(INITIAL_PROFILE);
+  const { logout } = useAuth();
   const [editing, setEditing] = useState<EditingSection>(null);
   const [editingBasic, setEditingBasic] = useState(false);
   const [editingBasicField, setEditingBasicField] = useState<EditingSection>(null);
   const [editingPrompts, setEditingPrompts] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handleSave = (field: keyof ProfileData, value: string | string[]) => {
-    setProfile({ ...profile, [field]: value });
-  };
+  const { data: apiProfile, isLoading, error } = useQuery<ApiProfile>({
+    queryKey: ["/api/mobile/profile"],
+  });
+
+  const profile: DisplayProfile | null = apiProfile ? mapApiToDisplay(apiProfile) : null;
+
+  const profileMutation = useMutation({
+    mutationFn: async (body: Record<string, unknown>) => {
+      const res = await apiRequest("PATCH", "/api/mobile/profile", body);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mobile/profile"] });
+    },
+  });
+
+  const handleSave = useCallback(async (field: DisplayField, value: string | string[]) => {
+    const body = mapFieldToApiBody(field, value, apiProfile);
+    if (Object.keys(body).length === 0) return;
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await profileMutation.mutateAsync(body);
+    } catch (err) {
+      console.error("Failed to save profile field:", err);
+      setSaveError("Failed to save changes. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [profileMutation, apiProfile]);
+
+  const handlePromptsSave = useCallback(async (
+    newPrompts: { id?: string; question: string; answer: string }[]
+  ) => {
+    if (!apiProfile) return;
+    setIsSaving(true);
+    try {
+      const oldPrompts = apiProfile.prompts || [];
+      const oldIds = new Set(oldPrompts.map((p) => p.id));
+      const newIds = new Set(newPrompts.filter((p) => p.id).map((p) => p.id));
+
+      const toDelete = oldPrompts.filter((p) => !newIds.has(p.id));
+      for (const p of toDelete) {
+        await apiRequest("DELETE", `/api/mobile/profile/prompts/${p.id}`);
+      }
+
+      for (let i = 0; i < newPrompts.length; i++) {
+        const np = newPrompts[i];
+        if (np.id && oldIds.has(np.id)) {
+          const old = oldPrompts.find((o) => o.id === np.id);
+          if (old && (old.promptQuestion !== np.question || old.promptAnswer !== np.answer)) {
+            await apiRequest("PUT", `/api/mobile/profile/prompts/${np.id}`, {
+              promptQuestion: np.question,
+              promptAnswer: np.answer,
+            });
+          }
+        } else if (!np.id) {
+          await apiRequest("POST", "/api/mobile/profile/prompts", {
+            promptQuestion: np.question,
+            promptAnswer: np.answer,
+            displayOrder: i,
+          });
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/mobile/profile"] });
+    } catch (err) {
+      console.error("Failed to save prompts:", err);
+      setSaveError("Failed to save prompts. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [apiProfile]);
 
   const openEditor = (
     key: string,
     title: string,
     type: "multi-select" | "single-select" | "text",
     options: string[],
-    field: keyof ProfileData,
+    field: DisplayField,
     maxSelections?: number,
     note?: string,
   ) => {
     setEditing({ key, title, type, options, field, maxSelections, note });
   };
+
+  if (isLoading) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top + webTopInset }]}>
+        <ActivityIndicator size="large" color="#171717" />
+        <Text style={styles.loadingText}>Loading profile...</Text>
+      </View>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <View style={[styles.container, styles.centered, { paddingTop: insets.top + webTopInset }]}>
+        <Text style={styles.errorText}>Failed to load profile</Text>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => queryClient.invalidateQueries({ queryKey: ["/api/mobile/profile"] })}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (editingBasic && !editingBasicField) {
     return (
@@ -337,37 +593,12 @@ export default function MyProfileScreen() {
             <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.basicFieldCard}
-            onPress={() =>
-              setEditingBasicField({
-                key: "location", title: "Location", type: "text", options: [], field: "location",
-              })
-            }
-            activeOpacity={0.6}
-          >
-            <View>
-              <Text style={styles.basicFieldLabel}>Location</Text>
-              <Text style={styles.basicFieldValue}>{profile.location}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.basicFieldCard}
-            onPress={() =>
-              setEditingBasicField({
-                key: "gender", title: "Gender", type: "single-select", options: GENDER_OPTIONS, field: "gender",
-              })
-            }
-            activeOpacity={0.6}
-          >
+          <View style={styles.basicFieldCard}>
             <View>
               <Text style={styles.basicFieldLabel}>Gender</Text>
               <Text style={styles.basicFieldValue}>{profile.gender}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
-          </TouchableOpacity>
+          </View>
         </View>
 
         {editingBasicField && (
@@ -378,7 +609,10 @@ export default function MyProfileScreen() {
             type={editingBasicField.type}
             options={editingBasicField.options}
             currentValue={profile[editingBasicField.field] as string}
-            onSave={(value) => handleSave(editingBasicField.field, value)}
+            onSave={(value) => {
+              handleSave(editingBasicField.field, value);
+              setEditingBasicField(null);
+            }}
             onClose={() => setEditingBasicField(null)}
           />
         )}
@@ -400,6 +634,20 @@ export default function MyProfileScreen() {
           <Text style={styles.title}>My Profile</Text>
         </View>
 
+        {isSaving && (
+          <View style={styles.savingBanner}>
+            <ActivityIndicator size="small" color="#ffffff" />
+            <Text style={styles.savingText}>Saving...</Text>
+          </View>
+        )}
+
+        {saveError && (
+          <TouchableOpacity style={styles.errorBanner} onPress={() => setSaveError(null)} activeOpacity={0.8}>
+            <Text style={styles.errorBannerText}>{saveError}</Text>
+            <Text style={styles.errorDismiss}>Dismiss</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={styles.body}>
           <SectionHeader title="Photos" visibility="Visible" />
           <ScrollView
@@ -408,9 +656,9 @@ export default function MyProfileScreen() {
             style={styles.photosScroll}
             contentContainerStyle={styles.photosContainer}
           >
-            {profile.photos.map((url, index) =>
-              url ? (
-                <Image key={index} source={{ uri: url }} style={styles.photo} />
+            {profile.photos.map((data, index) =>
+              data ? (
+                <Image key={index} source={{ uri: data }} style={styles.photo} />
               ) : (
                 <View key={index} style={styles.photoPlaceholder}>
                   <Text style={styles.photoPlaceholderText}>+</Text>
@@ -425,19 +673,11 @@ export default function MyProfileScreen() {
           <View style={styles.infoGrid}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Name:</Text>
-              <Text style={styles.infoValue}>{profile.name}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Age:</Text>
-              <Text style={styles.infoValue}>{profile.age}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Location:</Text>
-              <Text style={styles.infoValue}>{profile.location}</Text>
+              <Text style={styles.infoValue}>{profile.name || "Not set"}</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Gender:</Text>
-              <Text style={styles.infoValue}>{profile.gender}</Text>
+              <Text style={styles.infoValue}>{profile.gender || "Not set"}</Text>
             </View>
           </View>
 
@@ -445,12 +685,16 @@ export default function MyProfileScreen() {
 
           <SectionHeader title="Prompts" visibility="Visible" onEdit={() => setEditingPrompts(true)} />
           <View style={styles.promptsContainer}>
-            {profile.prompts.map((prompt, index) => (
-              <View key={index} style={styles.promptItem}>
-                <Text style={styles.promptQuestion}>{prompt.question}</Text>
-                <Text style={styles.promptAnswer}>{prompt.answer}</Text>
-              </View>
-            ))}
+            {profile.prompts.length === 0 ? (
+              <Text style={styles.emptyText}>No prompts yet</Text>
+            ) : (
+              profile.prompts.map((prompt, index) => (
+                <View key={prompt.id || index} style={styles.promptItem}>
+                  <Text style={styles.promptQuestion}>{prompt.question}</Text>
+                  <Text style={styles.promptAnswer}>{prompt.answer}</Text>
+                </View>
+              ))
+            )}
           </View>
 
           <View style={styles.divider} />
@@ -478,9 +722,13 @@ export default function MyProfileScreen() {
             visibility="Visible"
             onEdit={() => openEditor("whyHere", "Why you're here", "multi-select", WHY_HERE_OPTIONS, "whyHere")}
           />
-          {profile.whyHere.map((item, index) => (
-            <TextItem key={index} text={item} />
-          ))}
+          {(profile.whyHere.length === 0) ? (
+            <Text style={styles.emptyText}>Not set</Text>
+          ) : (
+            profile.whyHere.map((item, index) => (
+              <TextItem key={index} text={item} />
+            ))
+          )}
 
           <View style={styles.divider} />
 
@@ -498,9 +746,13 @@ export default function MyProfileScreen() {
             visibility="Visible"
             onEdit={() => openEditor("values", "Your values & lifestyle", "multi-select", VALUES_OPTIONS, "values")}
           />
-          {profile.values.map((item, index) => (
-            <TextItem key={index} text={item} />
-          ))}
+          {(profile.values.length === 0) ? (
+            <Text style={styles.emptyText}>Not set</Text>
+          ) : (
+            profile.values.map((item, index) => (
+              <TextItem key={index} text={item} />
+            ))
+          )}
 
           <View style={styles.divider} />
 
@@ -509,9 +761,13 @@ export default function MyProfileScreen() {
             visibility="Visible"
             onEdit={() => openEditor("lifestyle", "Lifestyle preferences", "multi-select", LIFESTYLE_OPTIONS, "lifestyle")}
           />
-          {profile.lifestyle.map((item, index) => (
-            <TextItem key={index} text={item} />
-          ))}
+          {(profile.lifestyle.length === 0) ? (
+            <Text style={styles.emptyText}>Not set</Text>
+          ) : (
+            profile.lifestyle.map((item, index) => (
+              <TextItem key={index} text={item} />
+            ))
+          )}
 
           <View style={styles.divider} />
 
@@ -556,9 +812,13 @@ export default function MyProfileScreen() {
             visibility="Hidden"
             onEdit={() => openEditor("whereAtInLife", "Where you're at in life", "multi-select", WHERE_AT_OPTIONS, "whereAtInLife")}
           />
-          {profile.whereAtInLife.map((item, index) => (
-            <TextItem key={index} text={item} />
-          ))}
+          {(profile.whereAtInLife.length === 0) ? (
+            <Text style={styles.emptyText}>Not set</Text>
+          ) : (
+            profile.whereAtInLife.map((item, index) => (
+              <TextItem key={index} text={item} />
+            ))
+          )}
 
           <View style={styles.divider} />
 
@@ -567,9 +827,13 @@ export default function MyProfileScreen() {
             visibility="Hidden"
             onEdit={() => openEditor("friendshipMatters", "What matters in friendships", "multi-select", FRIENDSHIP_MATTERS_OPTIONS, "friendshipMatters")}
           />
-          {profile.friendshipMatters.map((item, index) => (
-            <TextItem key={index} text={item} />
-          ))}
+          {(profile.friendshipMatters.length === 0) ? (
+            <Text style={styles.emptyText}>Not set</Text>
+          ) : (
+            profile.friendshipMatters.map((item, index) => (
+              <TextItem key={index} text={item} />
+            ))
+          )}
 
           <View style={styles.divider} />
 
@@ -577,17 +841,23 @@ export default function MyProfileScreen() {
           <View style={styles.socialContainer}>
             <View style={styles.socialRow}>
               <Text style={styles.socialLabel}>Instagram</Text>
-              <Text style={styles.socialValue}>{profile.instagram}</Text>
+              <Text style={styles.socialValue}>{profile.instagram || "Not set"}</Text>
             </View>
             <View style={styles.socialRow}>
               <Text style={styles.socialLabel}>LinkedIn</Text>
-              <Text style={styles.socialValue}>{profile.linkedin}</Text>
+              <Text style={styles.socialValue}>{profile.linkedin || "Not set"}</Text>
             </View>
           </View>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity style={styles.logoutButton} onPress={logout} activeOpacity={0.7}>
+            <Text style={styles.logoutText}>Log out</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {editing && (
+      {editing && profile && (
         <EditProfileSection
           key={editing.key + JSON.stringify(profile[editing.field])}
           visible
@@ -595,20 +865,26 @@ export default function MyProfileScreen() {
           type={editing.type}
           options={editing.options}
           currentValue={profile[editing.field] as string | string[]}
-          onSave={(value) => handleSave(editing.field, value)}
+          onSave={(value) => {
+            handleSave(editing.field, value);
+            setEditing(null);
+          }}
           onClose={() => setEditing(null)}
           maxSelections={editing.maxSelections}
           note={editing.note}
         />
       )}
 
-      {editingPrompts && (
+      {editingPrompts && profile && (
         <EditPrompts
           key={"prompts-" + profile.prompts.length}
           visible
           availablePrompts={PROMPT_OPTIONS}
           currentPrompts={profile.prompts}
-          onSave={(prompts) => setProfile({ ...profile, prompts })}
+          onSave={(prompts) => {
+            handlePromptsSave(prompts);
+            setEditingPrompts(false);
+          }}
           onClose={() => setEditingPrompts(false)}
         />
       )}
@@ -620,6 +896,66 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fafafa",
+  },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    color: "#737373",
+    marginTop: 12,
+  },
+  errorText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 16,
+    color: "#171717",
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: "#171717",
+    borderRadius: 24,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+  },
+  retryButtonText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: "#fafafa",
+  },
+  savingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#171717",
+    paddingVertical: 8,
+    gap: 8,
+  },
+  savingText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "#ffffff",
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#dc2626",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  errorBannerText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "#ffffff",
+    flex: 1,
+  },
+  errorDismiss: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+    color: "#ffffff",
+    marginLeft: 12,
   },
   header: {
     paddingHorizontal: 20,
@@ -755,6 +1091,12 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 4,
   },
+  emptyText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#a3a3a3",
+    fontStyle: "italic",
+  },
   socialContainer: {
     gap: 8,
   },
@@ -770,6 +1112,20 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 15,
     color: "#171717",
+  },
+  logoutButton: {
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  logoutText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: "#737373",
   },
   basicHeader: {
     paddingHorizontal: 20,

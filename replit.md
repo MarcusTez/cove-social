@@ -28,7 +28,7 @@ app/
     index.tsx           # Home tab - introductions screen
     chat.tsx            # Chat tab - conversation list
     events.tsx          # Events tab - placeholder
-    profile.tsx         # My Profile tab - editable profile with section editors
+    profile.tsx         # My Profile tab - API-connected editable profile
   chat/
     [id].tsx            # Chat thread (full screen, no tab bar)
 components/
@@ -76,7 +76,7 @@ shared/
    - **Home**: Weekly introductions with profile cards (or empty "being prepared" state)
    - **Chat**: Conversation list with unread badges → chat thread with message bubbles
    - **Events**: Events listing (placeholder, awaiting backend)
-   - **My Profile**: Scrollable profile with editable sections
+   - **My Profile**: API-connected profile with editable sections; fetches from `GET /profile`, saves via `PATCH /profile`, prompts via CRUD endpoints
 
 ## Chat Feature
 
