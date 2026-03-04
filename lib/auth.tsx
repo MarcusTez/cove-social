@@ -6,9 +6,12 @@ import { setAccessToken, getAccessToken, queryClient } from "@/lib/query-client"
 
 const REFRESH_TOKEN_KEY = "cove_refresh_token";
 
-const API_BASE = process.env.EXPO_PUBLIC_COVE_API_URL;
-if (!API_BASE) {
-  throw new Error("EXPO_PUBLIC_COVE_API_URL is not set. Cannot connect to the Cove API.");
+function getProxyBase(): string {
+  const host = process.env.EXPO_PUBLIC_DOMAIN;
+  if (!host) {
+    throw new Error("EXPO_PUBLIC_DOMAIN is not set. Cannot connect to the API.");
+  }
+  return `https://${host}/api/mobile`;
 }
 
 export interface CoveUser {
@@ -106,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!refreshToken) return false;
 
     try {
-      const res = await fetch(`${API_BASE}/auth/refresh`, {
+      const res = await fetch(`${getProxyBase()}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refreshToken }),
@@ -122,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(data.accessToken);
       await storeRefreshToken(data.refreshToken);
 
-      const profileRes = await fetch(`${API_BASE}/profile`, {
+      const profileRes = await fetch(`${getProxyBase()}/profile`, {
         headers: { Authorization: `Bearer ${data.accessToken}` },
       });
 
@@ -147,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [attemptRefresh]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch(`${API_BASE}/auth/login`, {
+    const res = await fetch(`${getProxyBase()}/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -171,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const token = getAccessToken();
 
     try {
-      await fetch(`${API_BASE}/auth/logout`, {
+      await fetch(`${getProxyBase()}/auth/logout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
