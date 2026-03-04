@@ -276,8 +276,31 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
           <SettingsRow label="Log out" onPress={handleLogout} />
           <View style={styles.divider} />
 
-          <SettingsRow label="Delete account" onPress={() => setDeleteStep("warning")} destructive />
+          <View style={styles.sectionSpacer} />
+          <Text style={styles.sectionTitle}>Legal</Text>
+
+          <SettingsRow label="Terms of Service" onPress={() => {
+            Linking.openURL("https://www.cove-social.com/terms");
+          }} />
           <View style={styles.divider} />
+
+          <SettingsRow label="Privacy Policy" onPress={() => {
+            Linking.openURL("https://www.cove-social.com/privacy");
+          }} />
+          <View style={styles.divider} />
+
+          <View style={styles.footerLinks}>
+            <TouchableOpacity onPress={() => Linking.openURL("https://www.cove-social.com/terms")} activeOpacity={0.6}>
+              <Text style={styles.footerLinkText}>Terms of Service</Text>
+            </TouchableOpacity>
+            <Text style={styles.footerDot}>·</Text>
+            <TouchableOpacity onPress={() => Linking.openURL("https://www.cove-social.com/privacy")} activeOpacity={0.6}>
+              <Text style={styles.footerLinkText}>Privacy Policy</Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity onPress={() => setDeleteStep("warning")} activeOpacity={0.6}>
+            <Text style={styles.footerDeleteText}>Delete account</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
     </Modal>
@@ -355,6 +378,31 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: "#e5e5e5",
+  },
+  footerLinks: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 32,
+    gap: 8,
+  },
+  footerLinkText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#737373",
+  },
+  footerDot: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#737373",
+  },
+  footerDeleteText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#737373",
+    textAlign: "center",
+    marginTop: 12,
+    marginBottom: 20,
   },
   deleteContent: {
     paddingHorizontal: 20,
