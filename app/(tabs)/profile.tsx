@@ -16,6 +16,7 @@ import { apiRequest, queryClient } from "@/lib/query-client";
 import { useAuth } from "@/lib/auth";
 import { EditProfileSection } from "@/components/EditProfileSection";
 import { EditPrompts } from "@/components/EditPrompts";
+import { SettingsScreen } from "@/components/SettingsScreen";
 
 interface ApiPhoto {
   id: string;
@@ -456,6 +457,7 @@ export default function MyProfileScreen() {
   const [editingPrompts, setEditingPrompts] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const { data: apiProfile, isLoading, error } = useQuery<ApiProfile>({
     queryKey: ["/api/mobile/profile"],
@@ -632,6 +634,9 @@ export default function MyProfileScreen() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>My Profile</Text>
+          <TouchableOpacity onPress={() => setShowSettings(true)} activeOpacity={0.6} style={styles.settingsCog}>
+            <Ionicons name="settings-outline" size={22} color="#171717" />
+          </TouchableOpacity>
         </View>
 
         {isSaving && (
@@ -833,11 +838,6 @@ export default function MyProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.divider} />
-
-          <TouchableOpacity style={styles.logoutButton} onPress={logout} activeOpacity={0.7}>
-            <Text style={styles.logoutText}>Log out</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -872,6 +872,12 @@ export default function MyProfileScreen() {
           onClose={() => setEditingPrompts(false)}
         />
       )}
+
+      <SettingsScreen
+        visible={showSettings}
+        onClose={() => setShowSettings(false)}
+        subscriptionStatus={apiProfile?.subscriptionStatus}
+      />
     </>
   );
 }
@@ -942,10 +948,16 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: "#e5e5e5",
+  },
+  settingsCog: {
+    padding: 4,
   },
   title: {
     fontFamily: "PlayfairDisplay_700Bold",
@@ -1109,20 +1121,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     fontSize: 16,
     color: "#171717",
-  },
-  logoutButton: {
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 8,
-    marginBottom: 20,
-  },
-  logoutText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 15,
-    color: "#737373",
   },
   basicHeader: {
     paddingHorizontal: 20,
