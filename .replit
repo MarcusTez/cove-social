@@ -68,3 +68,8 @@ task = "shell.exec"
 args = "npm run expo:dev"
 waitForPort = 8081
 ensurePreviewReachable = "/status"
+
+[userenv]
+
+[userenv.shared]
+EXPO_PUBLIC_COVE_API_URL = "https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile"

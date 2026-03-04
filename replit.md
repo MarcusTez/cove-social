@@ -6,8 +6,10 @@ A mobile application built with Expo (React Native) and Express backend. A socia
 
 - **Frontend**: Expo SDK 54 with React Native, using expo-router for file-based routing
 - **Backend**: Express server (TypeScript) on port 5000
+- **External API**: Cove API at `EXPO_PUBLIC_COVE_API_URL` for auth, profiles, matches, etc.
 - **Database**: PostgreSQL with Drizzle ORM
 - **State**: React Query (@tanstack/react-query) for server state
+- **Auth**: JWT-based auth with access tokens (in-memory) and refresh tokens (expo-secure-store / AsyncStorage on web)
 - **Fonts**: Playfair Display (serif branding/titles), Inter (sans-serif body/UI)
 - **Icons**: Ionicons from @expo/vector-icons
 
@@ -15,11 +17,11 @@ A mobile application built with Expo (React Native) and Express backend. A socia
 
 ```
 app/
-  _layout.tsx           # Root layout (fonts, splash, providers)
+  _layout.tsx           # Root layout (fonts, splash, providers, auth guard)
   (auth)/
     _layout.tsx         # Auth stack layout
     index.tsx           # Redirects to login
-    login.tsx           # Login screen (email + password)
+    login.tsx           # Login screen (email + password) — connected to Cove API
     register.tsx        # Register screen (first name, last name, email, confirm email)
   (tabs)/
     _layout.tsx         # Tab navigation layout (Home, Chat, Events, My Profile)
@@ -41,7 +43,8 @@ components/
 constants/
   colors.ts             # Color definitions
 lib/
-  query-client.ts       # React Query client config
+  auth.tsx              # AuthContext provider, useAuth hook, token management
+  query-client.ts       # React Query client config, apiRequest, auth header injection
 server/
   index.ts              # Express server entry
   routes.ts             # API routes
@@ -49,15 +52,31 @@ shared/
   schema.ts             # Drizzle database schemas
 ```
 
+## Authentication Flow
+
+1. On app launch, AuthProvider checks for a stored refresh token and attempts silent re-authentication via `POST /auth/refresh`
+2. If no valid refresh token, user sees the login screen
+3. Login calls `POST /auth/login` with email + password, receives access token (1hr) + refresh token (30 days) + user object
+4. Access token stored in memory (`lib/query-client.ts` module variable), refresh token stored in expo-secure-store (native) or AsyncStorage (web)
+5. All API requests automatically include `Authorization: Bearer <token>` header via `getAuthHeaders()` in query-client
+6. Navigation guard in `_layout.tsx` redirects unauthenticated users to login and authenticated users to tabs
+7. Logout calls `POST /auth/logout`, clears all tokens, and resets user state
+
+## Environment Variables
+
+- `EXPO_PUBLIC_COVE_API_URL`: Base URL for the Cove API (dev: `https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile`)
+- `EXPO_PUBLIC_DOMAIN`: Auto-set by Replit for the Express backend URL
+
 ## App Flow
 
 1. Splash screen with animated "Cove" branding
-2. Auth screens (login/register) - forms ready for backend API connection
-3. Main app with 4-tab navigation:
+2. Auth guard checks authentication state
+3. Login screen (connected to Cove API) or main app
+4. Main app with 4-tab navigation:
    - **Home**: Weekly introductions with profile cards (or empty "being prepared" state)
    - **Chat**: Conversation list with unread badges → chat thread with message bubbles
    - **Events**: Events listing (placeholder, awaiting backend)
-   - **My Profile**: Scrollable profile with editable sections (photos, basic info, prompts, activities, rituals, values, lifestyle, areas, plans, ideal week, describe words, relationship status, life stage, friendship priorities, social links)
+   - **My Profile**: Scrollable profile with editable sections
 
 ## Chat Feature
 

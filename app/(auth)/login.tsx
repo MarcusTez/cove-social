@@ -9,22 +9,38 @@ import {
   Platform,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "@/lib/auth";
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert("Missing fields", "Please enter your email and password.");
       return;
     }
-    Alert.alert("Coming soon", "Login will be connected to the backend API.");
+
+    setErrorMessage("");
+    setIsSubmitting(true);
+
+    try {
+      await login(email.trim(), password);
+    } catch (err: any) {
+      const msg = err?.message || "Something went wrong. Please try again.";
+      setErrorMessage(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
@@ -51,6 +67,12 @@ export default function LoginScreen() {
           <Text style={styles.logo}>Cove</Text>
 
           <View style={styles.form}>
+            {errorMessage ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{errorMessage}</Text>
+              </View>
+            ) : null}
+
             <View style={styles.fieldGroup}>
               <Text style={styles.label}>Email</Text>
               <TextInput
@@ -62,6 +84,7 @@ export default function LoginScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                editable={!isSubmitting}
                 testID="login-email"
               />
             </View>
@@ -75,17 +98,23 @@ export default function LoginScreen() {
                 placeholder="••••••••"
                 placeholderTextColor="#a3a3a3"
                 secureTextEntry
+                editable={!isSubmitting}
                 testID="login-password"
               />
             </View>
 
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, isSubmitting && styles.buttonDisabled]}
               onPress={handleLogin}
               activeOpacity={0.8}
+              disabled={isSubmitting}
               testID="login-button"
             >
-              <Text style={styles.buttonText}>Log in</Text>
+              {isSubmitting ? (
+                <ActivityIndicator color="#fafafa" />
+              ) : (
+                <Text style={styles.buttonText}>Log in</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.switchRow}>
@@ -133,6 +162,19 @@ const styles = StyleSheet.create({
   form: {
     gap: 24,
   },
+  errorContainer: {
+    backgroundColor: "#fef2f2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  errorText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#dc2626",
+  },
   fieldGroup: {
     gap: 8,
   },
@@ -158,6 +200,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     marginTop: 4,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   buttonText: {
     fontFamily: "Inter_500Medium",
