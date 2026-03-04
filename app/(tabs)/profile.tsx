@@ -767,7 +767,7 @@ export default function MyProfileScreen() {
             visibility="Visible"
             onEdit={() => openEditor("idealWeek", "Ideal social week", "single-select", IDEAL_WEEK_OPTIONS, "idealWeek", undefined, "Helps us match you with similar energy")}
           />
-          <TextItem text={profile.idealWeek} />
+          <TagList items={profile.idealWeek ? [profile.idealWeek] : []} />
 
           <View style={styles.divider} />
 
@@ -785,7 +785,7 @@ export default function MyProfileScreen() {
             visibility="Hidden"
             onEdit={() => openEditor("relationshipStatus", "Relationship status", "single-select", RELATIONSHIP_OPTIONS, "relationshipStatus")}
           />
-          <TextItem text={profile.relationshipStatus} />
+          <TagList items={profile.relationshipStatus ? [profile.relationshipStatus] : []} />
 
           <View style={styles.divider} />
 
