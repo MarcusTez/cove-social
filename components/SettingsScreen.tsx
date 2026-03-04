@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
@@ -9,10 +10,12 @@ import {
   Modal,
   Alert,
   Linking,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/lib/auth";
+import { apiRequest } from "@/lib/query-client";
 
 interface SettingsScreenProps {
   visible: boolean;
@@ -44,11 +47,16 @@ function SettingsRow({
   );
 }
 
+type DeleteStep = "none" | "warning" | "confirm";
+
 export function SettingsScreen({ visible, onClose, subscriptionStatus }: SettingsScreenProps) {
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
   const { logout } = useAuth();
+  const [deleteStep, setDeleteStep] = useState<DeleteStep>("none");
+  const [confirmText, setConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleLogout = () => {
     Alert.alert("Log out", "Are you sure you want to log out?", [
@@ -64,25 +72,154 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
     ]);
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      "Delete account",
-      "This action is permanent and cannot be undone. All your data will be deleted.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            Linking.openURL("mailto:support@cove-social.com?subject=Delete%20my%20account");
-          },
-        },
-      ]
-    );
+  const handleCloseDelete = () => {
+    setDeleteStep("none");
+    setConfirmText("");
   };
 
+  const handleDeleteConfirmed = async () => {
+    setIsDeleting(true);
+    try {
+      await apiRequest("DELETE", "/api/mobile/profile");
+    } catch {
+    }
+    setIsDeleting(false);
+    setDeleteStep("none");
+    setConfirmText("");
+    onClose();
+    await logout();
+  };
+
+  const handleClose = () => {
+    setDeleteStep("none");
+    setConfirmText("");
+    onClose();
+  };
+
+  if (deleteStep === "warning") {
+    return (
+      <Modal visible={visible} animationType="slide" onRequestClose={handleCloseDelete}>
+        <View
+          style={[
+            styles.container,
+            {
+              paddingTop: insets.top + webTopInset,
+              paddingBottom: Math.max(insets.bottom, webBottomInset) + 12,
+            },
+          ]}
+        >
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.deleteContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.warningIconContainer}>
+              <Ionicons name="warning" size={32} color="#dc2626" />
+            </View>
+
+            <Text style={styles.deleteTitle}>Delete your account?</Text>
+            <Text style={styles.deleteSubtitle}>
+              This will permanently delete your account, profile, and all messages. This action cannot be undone.
+            </Text>
+
+            <View style={styles.deleteInfoCard}>
+              <Text style={styles.deleteInfoTitle}>What will be deleted:</Text>
+              <Text style={styles.deleteInfoItem}>• Your profile and photos</Text>
+              <Text style={styles.deleteInfoItem}>• All your messages and conversations</Text>
+              <Text style={styles.deleteInfoItem}>• Your membership and subscription</Text>
+              <Text style={styles.deleteInfoItem}>• All your account data</Text>
+            </View>
+          </ScrollView>
+
+          <View style={styles.deleteActions}>
+            <TouchableOpacity
+              style={styles.continueDeleteButton}
+              onPress={() => setDeleteStep("confirm")}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.continueDeleteText}>Continue to delete</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCloseDelete}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  if (deleteStep === "confirm") {
+    const isDeleteTyped = confirmText.trim().toUpperCase() === "DELETE";
+    return (
+      <Modal visible={visible} animationType="slide" onRequestClose={handleCloseDelete}>
+        <View
+          style={[
+            styles.container,
+            {
+              paddingTop: insets.top + webTopInset,
+              paddingBottom: Math.max(insets.bottom, webBottomInset) + 12,
+            },
+          ]}
+        >
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.deleteContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.warningIconContainer}>
+              <Ionicons name="warning" size={32} color="#dc2626" />
+            </View>
+
+            <Text style={styles.deleteTitle}>Are you absolutely sure?</Text>
+            <Text style={styles.deleteSubtitle}>
+              This is your final chance to change your mind. Once confirmed, your account will be permanently deleted.
+            </Text>
+
+            <Text style={styles.confirmLabel}>Type "DELETE" to confirm</Text>
+            <TextInput
+              style={styles.confirmInput}
+              value={confirmText}
+              onChangeText={setConfirmText}
+              placeholder="DELETE"
+              placeholderTextColor="#a3a3a3"
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+          </ScrollView>
+
+          <View style={styles.deleteActions}>
+            <TouchableOpacity
+              style={[styles.finalDeleteButton, !isDeleteTyped && styles.finalDeleteButtonDisabled]}
+              onPress={handleDeleteConfirmed}
+              disabled={!isDeleteTyped || isDeleting}
+              activeOpacity={0.7}
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.finalDeleteText}>Delete my account permanently</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCloseDelete}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
       <View
         style={[
           styles.container,
@@ -94,7 +231,7 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
       >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Settings</Text>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+          <TouchableOpacity onPress={handleClose} style={styles.closeButton} activeOpacity={0.7}>
             <Ionicons name="close" size={22} color="#171717" />
           </TouchableOpacity>
         </View>
@@ -139,7 +276,7 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
           <SettingsRow label="Log out" onPress={handleLogout} />
           <View style={styles.divider} />
 
-          <SettingsRow label="Delete account" onPress={handleDeleteAccount} destructive />
+          <SettingsRow label="Delete account" onPress={() => setDeleteStep("warning")} destructive />
           <View style={styles.divider} />
         </ScrollView>
       </View>
@@ -218,5 +355,117 @@ const styles = StyleSheet.create({
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: "#e5e5e5",
+  },
+  deleteContent: {
+    paddingHorizontal: 20,
+    paddingTop: 48,
+    alignItems: "center",
+  },
+  warningIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#fef2f2",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  deleteTitle: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 26,
+    color: "#171717",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  deleteSubtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    color: "#737373",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 32,
+    paddingHorizontal: 10,
+  },
+  deleteInfoCard: {
+    width: "100%",
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    borderRadius: 12,
+    padding: 20,
+    backgroundColor: "#ffffff",
+  },
+  deleteInfoTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: "#171717",
+    marginBottom: 12,
+  },
+  deleteInfoItem: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#737373",
+    lineHeight: 24,
+  },
+  deleteActions: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    gap: 12,
+  },
+  continueDeleteButton: {
+    borderWidth: 1,
+    borderColor: "#dc2626",
+    borderRadius: 28,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  continueDeleteText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: "#dc2626",
+  },
+  cancelButton: {
+    backgroundColor: "#171717",
+    borderRadius: 28,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: "#fafafa",
+  },
+  confirmLabel: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: "#171717",
+    alignSelf: "flex-start",
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  confirmInput: {
+    width: "100%",
+    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    color: "#171717",
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: "#ffffff",
+  },
+  finalDeleteButton: {
+    backgroundColor: "#f5c6c6",
+    borderRadius: 28,
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  finalDeleteButtonDisabled: {
+    opacity: 0.5,
+  },
+  finalDeleteText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: "#dc2626",
   },
 });

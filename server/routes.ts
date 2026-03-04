@@ -52,6 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/mobile/auth/logout", proxyToCove);
   app.get("/api/mobile/profile", proxyToCove);
   app.patch("/api/mobile/profile", proxyToCove);
+  app.delete("/api/mobile/profile", proxyToCove);
   app.get("/api/mobile/profile/photos", proxyToCove);
   app.post("/api/mobile/profile/photos", proxyToCove);
   app.delete("/api/mobile/profile/photos/:id", proxyToCove);
