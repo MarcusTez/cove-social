@@ -722,13 +722,7 @@ export default function MyProfileScreen() {
             visibility="Visible"
             onEdit={() => openEditor("whyHere", "Why you're here", "multi-select", WHY_HERE_OPTIONS, "whyHere")}
           />
-          {(profile.whyHere.length === 0) ? (
-            <Text style={styles.emptyText}>Not set</Text>
-          ) : (
-            profile.whyHere.map((item, index) => (
-              <TextItem key={index} text={item} />
-            ))
-          )}
+          <TagList items={profile.whyHere} />
 
           <View style={styles.divider} />
 
@@ -746,13 +740,7 @@ export default function MyProfileScreen() {
             visibility="Visible"
             onEdit={() => openEditor("values", "Your values & lifestyle", "multi-select", VALUES_OPTIONS, "values")}
           />
-          {(profile.values.length === 0) ? (
-            <Text style={styles.emptyText}>Not set</Text>
-          ) : (
-            profile.values.map((item, index) => (
-              <TextItem key={index} text={item} />
-            ))
-          )}
+          <TagList items={profile.values} />
 
           <View style={styles.divider} />
 
@@ -761,13 +749,7 @@ export default function MyProfileScreen() {
             visibility="Visible"
             onEdit={() => openEditor("lifestyle", "Lifestyle preferences", "multi-select", LIFESTYLE_OPTIONS, "lifestyle")}
           />
-          {(profile.lifestyle.length === 0) ? (
-            <Text style={styles.emptyText}>Not set</Text>
-          ) : (
-            profile.lifestyle.map((item, index) => (
-              <TextItem key={index} text={item} />
-            ))
-          )}
+          <TagList items={profile.lifestyle} />
 
           <View style={styles.divider} />
 
@@ -812,13 +794,7 @@ export default function MyProfileScreen() {
             visibility="Hidden"
             onEdit={() => openEditor("whereAtInLife", "Where you're at in life", "multi-select", WHERE_AT_OPTIONS, "whereAtInLife")}
           />
-          {(profile.whereAtInLife.length === 0) ? (
-            <Text style={styles.emptyText}>Not set</Text>
-          ) : (
-            profile.whereAtInLife.map((item, index) => (
-              <TextItem key={index} text={item} />
-            ))
-          )}
+          <TagList items={profile.whereAtInLife} />
 
           <View style={styles.divider} />
 
@@ -827,13 +803,7 @@ export default function MyProfileScreen() {
             visibility="Hidden"
             onEdit={() => openEditor("friendshipMatters", "What matters in friendships", "multi-select", FRIENDSHIP_MATTERS_OPTIONS, "friendshipMatters")}
           />
-          {(profile.friendshipMatters.length === 0) ? (
-            <Text style={styles.emptyText}>Not set</Text>
-          ) : (
-            profile.friendshipMatters.map((item, index) => (
-              <TextItem key={index} text={item} />
-            ))
-          )}
+          <TagList items={profile.friendshipMatters} />
 
           <View style={styles.divider} />
 
