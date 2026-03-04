@@ -276,25 +276,12 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
           <SettingsRow label="Log out" onPress={handleLogout} />
           <View style={styles.divider} />
 
-          <View style={styles.sectionSpacer} />
-          <Text style={styles.sectionTitle}>Legal</Text>
-
-          <SettingsRow label="Terms of Service" onPress={() => {
-            Linking.openURL("https://www.cove-social.com/terms");
-          }} />
-          <View style={styles.divider} />
-
-          <SettingsRow label="Privacy Policy" onPress={() => {
-            Linking.openURL("https://www.cove-social.com/privacy");
-          }} />
-          <View style={styles.divider} />
-
           <View style={styles.footerLinks}>
-            <TouchableOpacity onPress={() => Linking.openURL("https://www.cove-social.com/terms")} activeOpacity={0.6}>
+            <TouchableOpacity onPress={() => Linking.openURL("https://cove-social.com/terms")} activeOpacity={0.6}>
               <Text style={styles.footerLinkText}>Terms of Service</Text>
             </TouchableOpacity>
             <Text style={styles.footerDot}>·</Text>
-            <TouchableOpacity onPress={() => Linking.openURL("https://www.cove-social.com/privacy")} activeOpacity={0.6}>
+            <TouchableOpacity onPress={() => Linking.openURL("https://cove-social.com/privacy")} activeOpacity={0.6}>
               <Text style={styles.footerLinkText}>Privacy Policy</Text>
             </TouchableOpacity>
           </View>
