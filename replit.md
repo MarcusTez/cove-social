@@ -26,13 +26,15 @@ app/
     index.tsx           # Home tab - introductions screen
     chat.tsx            # Chat tab - conversation list
     events.tsx          # Events tab - placeholder
-    profile.tsx         # My Profile tab - placeholder
+    profile.tsx         # My Profile tab - editable profile with section editors
   chat/
     [id].tsx            # Chat thread (full screen, no tab bar)
 components/
   CoveSplash.tsx        # Animated splash screen
   ProfileCard.tsx       # Profile introduction card component
   BlockModal.tsx        # Block user confirmation modal
+  EditProfileSection.tsx # Reusable editor modal (multi-select, single-select, text)
+  EditPrompts.tsx       # Prompts editor modal (pick 1-3 prompts with answers)
   ErrorBoundary.tsx     # Error boundary wrapper
   ErrorFallback.tsx     # Error fallback UI
   KeyboardAwareScrollViewCompat.tsx
@@ -55,7 +57,7 @@ shared/
    - **Home**: Weekly introductions with profile cards (or empty "being prepared" state)
    - **Chat**: Conversation list with unread badges → chat thread with message bubbles
    - **Events**: Events listing (placeholder, awaiting backend)
-   - **My Profile**: User profile (placeholder, awaiting backend)
+   - **My Profile**: Scrollable profile with editable sections (photos, basic info, prompts, activities, rituals, values, lifestyle, areas, plans, ideal week, describe words, relationship status, life stage, friendship priorities, social links)
 
 ## Chat Feature
 
