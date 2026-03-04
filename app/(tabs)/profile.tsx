@@ -719,7 +719,7 @@ export default function MyProfileScreen() {
 
           <SectionHeader
             title="Why you're here"
-            visibility="Visible"
+            visibility="Hidden"
             onEdit={() => openEditor("whyHere", "Why you're here", "multi-select", WHY_HERE_OPTIONS, "whyHere")}
           />
           <TagList items={profile.whyHere} />
@@ -728,7 +728,7 @@ export default function MyProfileScreen() {
 
           <SectionHeader
             title="Where you spend time"
-            visibility="Visible"
+            visibility="Hidden"
             onEdit={() => openEditor("londonAreas", "Where you spend time", "multi-select", LONDON_AREAS_OPTIONS, "londonAreas", undefined, "We'll prioritize matches near you - but you'll still see people across London.")}
           />
           <TagList items={profile.londonAreas} />
@@ -737,7 +737,7 @@ export default function MyProfileScreen() {
 
           <SectionHeader
             title="Your values & lifestyle"
-            visibility="Visible"
+            visibility="Hidden"
             onEdit={() => openEditor("values", "Your values & lifestyle", "multi-select", VALUES_OPTIONS, "values")}
           />
           <TagList items={profile.values} />
@@ -746,7 +746,7 @@ export default function MyProfileScreen() {
 
           <SectionHeader
             title="Lifestyle preferences"
-            visibility="Visible"
+            visibility="Hidden"
             onEdit={() => openEditor("lifestyle", "Lifestyle preferences", "multi-select", LIFESTYLE_OPTIONS, "lifestyle")}
           />
           <TagList items={profile.lifestyle} />
@@ -755,7 +755,7 @@ export default function MyProfileScreen() {
 
           <SectionHeader
             title="Upcoming plans"
-            visibility="Visible"
+            visibility="Hidden"
             onEdit={() => openEditor("upcomingPlans", "Upcoming plans", "multi-select", UPCOMING_PLANS_OPTIONS, "upcomingPlans")}
           />
           <TagList items={profile.upcomingPlans} />
@@ -764,7 +764,7 @@ export default function MyProfileScreen() {
 
           <SectionHeader
             title="Ideal social week"
-            visibility="Visible"
+            visibility="Hidden"
             onEdit={() => openEditor("idealWeek", "Ideal social week", "single-select", IDEAL_WEEK_OPTIONS, "idealWeek", undefined, "Helps us match you with similar energy")}
           />
           <TagList items={profile.idealWeek ? [profile.idealWeek] : []} />
@@ -807,7 +807,7 @@ export default function MyProfileScreen() {
 
           <View style={styles.divider} />
 
-          <SectionHeader title="Social verification" visibility="Visible" />
+          <SectionHeader title="Social verification" visibility="Hidden" />
           <View style={styles.socialContainer}>
             <View style={styles.socialRow}>
               <Text style={styles.socialLabel}>Instagram</Text>
