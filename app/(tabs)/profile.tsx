@@ -809,14 +809,28 @@ export default function MyProfileScreen() {
 
           <SectionHeader title="Social verification" visibility="Hidden" />
           <View style={styles.socialContainer}>
-            <View style={styles.socialRow}>
-              <Text style={styles.socialLabel}>Instagram</Text>
-              <Text style={styles.socialValue}>{profile.instagram || "Not set"}</Text>
-            </View>
-            <View style={styles.socialRow}>
-              <Text style={styles.socialLabel}>LinkedIn</Text>
-              <Text style={styles.socialValue}>{profile.linkedin || "Not set"}</Text>
-            </View>
+            <TouchableOpacity
+              style={styles.socialCard}
+              onPress={() => openEditor("instagram", "Instagram handle", "text", [], "instagram")}
+              activeOpacity={0.6}
+            >
+              <View style={styles.socialCardContent}>
+                <Text style={styles.socialCardLabel}>Instagram</Text>
+                <Text style={styles.socialCardValue} numberOfLines={1}>{profile.instagram || "Not set"}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.socialCard}
+              onPress={() => openEditor("linkedin", "LinkedIn URL", "text", [], "linkedin")}
+              activeOpacity={0.6}
+            >
+              <View style={styles.socialCardContent}>
+                <Text style={styles.socialCardLabel}>LinkedIn</Text>
+                <Text style={styles.socialCardValue} numberOfLines={1}>{profile.linkedin || "Not set"}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.divider} />
@@ -1068,19 +1082,32 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
   },
   socialContainer: {
-    gap: 8,
+    gap: 12,
   },
-  socialRow: {
-    gap: 2,
+  socialCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: "#ffffff",
   },
-  socialLabel: {
-    fontFamily: "Inter_500Medium",
+  socialCardContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  socialCardLabel: {
+    fontFamily: "Inter_400Regular",
     fontSize: 13,
     color: "#737373",
+    marginBottom: 4,
   },
-  socialValue: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
+  socialCardValue: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 16,
     color: "#171717",
   },
   logoutButton: {
