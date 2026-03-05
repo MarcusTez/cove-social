@@ -8,6 +8,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+const MAX_PILLS = 9;
+
 interface PromptItem {
   promptQuestion: string;
   promptAnswer: string;
@@ -78,11 +80,16 @@ export function ProfileCard({
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>This week I'm probably…</Text>
           <View style={styles.tagsContainer}>
-            {thisWeekActivities.map((activity, index) => (
+            {thisWeekActivities.slice(0, MAX_PILLS).map((activity, index) => (
               <View key={index} style={styles.tag}>
                 <Text style={styles.tagText}>{activity}</Text>
               </View>
             ))}
+            {thisWeekActivities.length > MAX_PILLS && (
+              <View style={styles.moreTag}>
+                <Text style={styles.moreTagText}>+{thisWeekActivities.length - MAX_PILLS} more</Text>
+              </View>
+            )}
           </View>
         </View>
       )}
@@ -91,11 +98,16 @@ export function ProfileCard({
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Interests</Text>
           <View style={styles.tagsContainer}>
-            {interests.map((interest, index) => (
+            {interests.slice(0, MAX_PILLS).map((interest, index) => (
               <View key={index} style={styles.tag}>
                 <Text style={styles.tagText}>{interest}</Text>
               </View>
             ))}
+            {interests.length > MAX_PILLS && (
+              <View style={styles.moreTag}>
+                <Text style={styles.moreTagText}>+{interests.length - MAX_PILLS} more</Text>
+              </View>
+            )}
           </View>
         </View>
       )}
@@ -104,11 +116,16 @@ export function ProfileCard({
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Regular rituals</Text>
           <View style={styles.tagsContainer}>
-            {regularRituals.map((ritual, index) => (
+            {regularRituals.slice(0, MAX_PILLS).map((ritual, index) => (
               <View key={index} style={styles.tag}>
                 <Text style={styles.tagText}>{ritual}</Text>
               </View>
             ))}
+            {regularRituals.length > MAX_PILLS && (
+              <View style={styles.moreTag}>
+                <Text style={styles.moreTagText}>+{regularRituals.length - MAX_PILLS} more</Text>
+              </View>
+            )}
           </View>
         </View>
       )}
@@ -204,6 +221,18 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 13,
     color: "#171717",
+  },
+  moreTag: {
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+  },
+  moreTagText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "#737373",
   },
   matchTag: {
     backgroundColor: "#171717",
