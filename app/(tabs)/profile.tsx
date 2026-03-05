@@ -747,6 +747,15 @@ export default function MyProfileScreen() {
           <View style={styles.divider} />
 
           <SectionHeader
+            title="Upcoming plans"
+            visibility="Visible"
+            onEdit={() => openEditor("upcomingPlans", "Upcoming plans", "multi-select", UPCOMING_PLANS_OPTIONS, "upcomingPlans", undefined, undefined, true)}
+          />
+          <TagList items={profile.upcomingPlans} />
+
+          <View style={styles.divider} />
+
+          <SectionHeader
             title="Why you're here"
             visibility="Hidden"
             onEdit={() => openEditor("whyHere", "Why you're here", "multi-select", WHY_HERE_OPTIONS, "whyHere")}
@@ -779,15 +788,6 @@ export default function MyProfileScreen() {
             onEdit={() => openEditor("lifestyle", "Lifestyle preferences", "multi-select", LIFESTYLE_OPTIONS, "lifestyle")}
           />
           <TagList items={profile.lifestyle} />
-
-          <View style={styles.divider} />
-
-          <SectionHeader
-            title="Upcoming plans"
-            visibility="Hidden"
-            onEdit={() => openEditor("upcomingPlans", "Upcoming plans", "multi-select", UPCOMING_PLANS_OPTIONS, "upcomingPlans", undefined, undefined, true)}
-          />
-          <TagList items={profile.upcomingPlans} />
 
           <View style={styles.divider} />
 
