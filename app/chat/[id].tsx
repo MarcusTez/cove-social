@@ -215,7 +215,7 @@ export default function ChatThreadScreen() {
                     activeOpacity={0.6}
                     testID="menu-view-profile"
                   >
-                    <Text style={styles.dropdownItemText}>View intro profile</Text>
+                    <Text style={styles.dropdownItemText}>View profile</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.dropdownItem}
