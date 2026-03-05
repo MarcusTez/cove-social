@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -164,21 +165,43 @@ export default function HomeScreen() {
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
-          styles.emptyContainer,
-          { paddingTop: insets.top + webTopInset },
+          styles.emptyScrollContent,
+          {
+            paddingTop: insets.top + webTopInset,
+            paddingBottom: 100,
+          },
         ]}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
         }
       >
-        <View style={styles.emptyContent}>
+        <Text style={styles.emptyHeader}>Cove</Text>
+
+        <View style={styles.emptyMiddle}>
           <Text style={styles.emptyTitle}>
-            Your introductions are being prepared
+            Your introductions are{"\n"}being prepared
           </Text>
           <Text style={styles.emptySubtitle}>
-            We introduce members thoughtfully, not endlessly.{"\n"}Your next
-            curated introductions will arrive soon.
+            We introduce members thoughtfully, not{"\n"}endlessly.
           </Text>
+          <Text style={styles.emptySubtitle}>
+            Your next curated introductions will arrive{"\n"}soon.
+          </Text>
+        </View>
+
+        <View style={styles.improveCard}>
+          <Text style={styles.improveTitle}>Improve your introductions</Text>
+          <Text style={styles.improveText}>
+            More detailed profiles lead to better introductions. Keep your
+            profile up to date so we can match you thoughtfully.
+          </Text>
+          <TouchableOpacity
+            style={styles.updateButton}
+            onPress={() => router.navigate("/(tabs)/profile")}
+            testID="update-profile-button"
+          >
+            <Text style={styles.updateButtonText}>Update my profile</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     );
@@ -293,6 +316,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 24,
   },
+  emptyScrollContent: {
+    flexGrow: 1,
+    backgroundColor: "#fafafa",
+    paddingHorizontal: 20,
+  },
+  emptyHeader: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 22,
+    color: "#171717",
+    textAlign: "center",
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  emptyMiddle: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 40,
+  },
   emptyContent: {
     alignItems: "center",
   },
@@ -306,10 +348,41 @@ const styles = StyleSheet.create({
   },
   emptySubtitle: {
     fontFamily: "Inter_400Regular",
-    fontSize: 16,
+    fontSize: 15,
     color: "#737373",
     textAlign: "center",
-    lineHeight: 24,
+    lineHeight: 22,
     maxWidth: 320,
+  },
+  improveCard: {
+    backgroundColor: "#f5f5f5",
+    borderRadius: 16,
+    padding: 24,
+    marginTop: "auto" as const,
+  },
+  improveTitle: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 22,
+    color: "#171717",
+    marginBottom: 8,
+    lineHeight: 28,
+  },
+  improveText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#737373",
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  updateButton: {
+    backgroundColor: "#171717",
+    borderRadius: 30,
+    paddingVertical: 16,
+    alignItems: "center" as const,
+  },
+  updateButtonText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+    color: "#fafafa",
   },
 });
