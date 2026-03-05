@@ -20,7 +20,6 @@ export interface ProfileCardProps {
   photoUrl?: string;
   location: string;
   thisWeekActivities?: string[];
-  interests?: string[];
   regularRituals?: string[];
   prompts?: PromptItem[];
   overlapTags?: string[];
@@ -33,7 +32,6 @@ export function ProfileCard({
   photoUrl,
   location,
   thisWeekActivities,
-  interests,
   regularRituals,
   prompts,
   overlapTags,
@@ -88,24 +86,6 @@ export function ProfileCard({
             {thisWeekActivities.length > MAX_PILLS && (
               <View style={styles.moreTag}>
                 <Text style={styles.moreTagText}>+{thisWeekActivities.length - MAX_PILLS} more</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      )}
-
-      {interests && interests.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Interests</Text>
-          <View style={styles.tagsContainer}>
-            {interests.slice(0, MAX_PILLS).map((interest, index) => (
-              <View key={index} style={styles.tag}>
-                <Text style={styles.tagText}>{interest}</Text>
-              </View>
-            ))}
-            {interests.length > MAX_PILLS && (
-              <View style={styles.moreTag}>
-                <Text style={styles.moreTagText}>+{interests.length - MAX_PILLS} more</Text>
               </View>
             )}
           </View>

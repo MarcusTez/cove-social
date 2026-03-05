@@ -174,11 +174,6 @@ export default function HomeScreen() {
           const sortedPrompts = partner.prompts?.length
             ? [...partner.prompts].sort((a, b) => a.displayOrder - b.displayOrder)
             : [];
-          const interests = [
-            ...(partner.valuesLifestyle ?? []),
-            ...(partner.lifestylePreferences ?? []),
-          ];
-
           return (
             <ProfileCard
               key={match.id}
@@ -190,7 +185,6 @@ export default function HomeScreen() {
                   : "London"
               }
               thisWeekActivities={partner.thisWeekActivities}
-              interests={interests}
               regularRituals={partner.regularRituals}
               prompts={sortedPrompts}
               overlapTags={match.overlapTags}
