@@ -5,7 +5,8 @@ const COVE_API_BASE = process.env.EXPO_PUBLIC_COVE_API_URL || "https://e4af2c56-
 
 async function proxyToCove(req: Request, res: Response) {
   const path = req.path.replace("/api/mobile", "");
-  const targetUrl = `${COVE_API_BASE}${path}`;
+  const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
+  const targetUrl = `${COVE_API_BASE}${path}${queryString ? `?${queryString}` : ""}`;
 
   try {
     const headers: Record<string, string> = {
@@ -61,6 +62,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/mobile/profile/prompts/:id", proxyToCove);
   app.delete("/api/mobile/profile/prompts/:id", proxyToCove);
   app.get("/api/mobile/matches", proxyToCove);
+  app.get("/api/mobile/matches/:matchId", proxyToCove);
   app.post("/api/mobile/blocks", proxyToCove);
   app.get("/api/mobile/matching-preferences", proxyToCove);
   app.put("/api/mobile/matching-preferences", proxyToCove);

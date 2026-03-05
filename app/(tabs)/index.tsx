@@ -1,113 +1,136 @@
-import { useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   Platform,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQuery } from "@tanstack/react-query";
 import { ProfileCard } from "@/components/ProfileCard";
 
-const MOCK_PROFILES = [
-  {
-    id: 1,
-    name: "Lena",
-    photoUrl:
-      "https://images.unsplash.com/photo-1762522921456-cdfe882d36c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx5b3VuZyUyMHByb2Zlc3Npb25hbCUyMHdvbWFuJTIwcG9ydHJhaXQlMjBzbWlsaW5nfGVufDF8fHx8MTc3MjQ1NzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080",
-    location: "London",
-    thisWeek: "A couple of runs + a comedy night, and one good dinner.",
-    favoriteSong: "Fred again.. – adore u",
-    interests: [
-      "Dinner out",
-      "Pilates/Yoga",
-      "Running",
-      "Comedy nights",
-      "Networking",
-      "Park walks",
-    ],
-    regularRituals: [
-      "Yoga",
-      "Running",
-      "Gym",
-      "Pub quiz",
-      "Cooking",
-      "Dance",
-      "Founder life",
-      "Networking",
-    ],
-    promptQuestion: "A small ritual I care about…",
-    promptAnswer:
-      "Sunday morning run, coffee, then a museum or a bookshop wander.",
-    matchReasons: [
-      "Personal growth is non-negotiable",
-      "I want friends who challenge me",
-      "Movement is my meditation",
-      "I optimize everything (sleep, diet, routine)",
-      "Give me dinner parties over nightclubs",
-    ],
-  },
-  {
-    id: 2,
-    name: "Marcus",
-    photoUrl:
-      "https://images.unsplash.com/photo-1764084051711-45a3b7c84c06?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBtYW4lMjBjYXN1YWwlMjBwb3J0cmFpdCUyMGhhcHB5fGVufDF8fHx8MTc3MjQ1NzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080",
-    location: "London",
-    thisWeek:
-      "Writing sessions in the morning, gallery hop, probably a late jazz night.",
-    favoriteSong: "Khruangbin – Time (You and I)",
-    interests: [
-      "Jazz",
-      "Art galleries",
-      "Writing",
-      "Coffee shops",
-      "Vinyl records",
-      "Live music",
-    ],
-    regularRituals: [
-      "Morning pages",
-      "Gallery visits",
-      "Jazz nights",
-      "Poetry",
-      "Photography",
-      "Coffee ritual",
-      "Reading",
-      "Writing",
-    ],
-    promptQuestion: "A small ritual I care about…",
-    promptAnswer:
-      "Early morning coffee on the balcony with a notebook, no phone.",
-    matchReasons: [
-      "I need culture like I need air",
-      "Fashion/art/music is my love language",
-      "I collect experiences, not things",
-      "Quality time over large groups",
-      "Aesthetics matter to me",
-    ],
-  },
-];
+interface MatchPhoto {
+  id: string;
+  userId: string;
+  photoData: string;
+  displayOrder: number;
+  createdAt: string;
+}
+
+interface MatchPrompt {
+  id: string;
+  userId: string;
+  promptQuestion: string;
+  promptAnswer: string;
+  displayOrder: number;
+  createdAt: string;
+}
+
+interface MatchPartner {
+  id: string;
+  firstName: string;
+  gender: string;
+  londonAreas: string[];
+  personalityWords: string[];
+  regularRituals: string[];
+  thisWeekActivities: string[];
+  valuesLifestyle: string[];
+  friendshipValues: string[];
+  friendshipPractical: string[];
+  socialWeekStyle: string;
+  lifestylePreferences: string[];
+  upcomingPlans: string[];
+  lifeStageCareer: string[];
+  lifeStageSituation: string[];
+  lifeStageGoals: string[];
+  relationshipStatus: string;
+  instagramHandle: string;
+  linkedinUrl: string;
+  photos: MatchPhoto[];
+  prompts: MatchPrompt[];
+}
+
+interface Match {
+  id: string;
+  weekOf: string;
+  score: number;
+  overlapTags: string[];
+  status: string;
+  createdAt: string;
+  partner: MatchPartner;
+}
+
+interface MatchesResponse {
+  matches: Match[];
+}
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const [hasIntroductions] = useState(true);
-
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
-  const handleMessage = (profileId: number) => {
-    // Will be connected to backend API later
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+  } = useQuery<MatchesResponse>({
+    queryKey: ["/api/mobile/matches"],
+  });
+
+  const matches = data?.matches ?? [];
+  const hasIntroductions = matches.length > 0;
+
+  const handleMessage = (matchId: string) => {
   };
 
-  const handleViewProfile = (profileId: number) => {
-    // Will navigate to full profile later
+  const handleViewProfile = (matchId: string) => {
   };
 
-  if (!hasIntroductions) {
+  if (isLoading) {
     return (
       <View
         style={[
           styles.emptyContainer,
           { paddingTop: insets.top + webTopInset },
         ]}
+      >
+        <ActivityIndicator size="large" color="#171717" />
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View
+        style={[
+          styles.emptyContainer,
+          { paddingTop: insets.top + webTopInset },
+        ]}
+      >
+        <View style={styles.emptyContent}>
+          <Text style={styles.emptyTitle}>Something went wrong</Text>
+          <Text style={styles.emptySubtitle}>
+            We couldn't load your introductions.{"\n"}Pull down to try again.
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (!hasIntroductions) {
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[
+          styles.emptyContainer,
+          { paddingTop: insets.top + webTopInset },
+        ]}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+        }
       >
         <View style={styles.emptyContent}>
           <Text style={styles.emptyTitle}>
@@ -118,7 +141,7 @@ export default function HomeScreen() {
             curated introductions will arrive soon.
           </Text>
         </View>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -133,6 +156,9 @@ export default function HomeScreen() {
         },
       ]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+      }
     >
       <Text style={styles.title}>This week's introductions</Text>
       <Text style={styles.subtitle}>
@@ -140,23 +166,40 @@ export default function HomeScreen() {
       </Text>
 
       <View style={styles.cardsContainer}>
-        {MOCK_PROFILES.map((profile) => (
-          <ProfileCard
-            key={profile.id}
-            name={profile.name}
-            photoUrl={profile.photoUrl}
-            location={profile.location}
-            thisWeek={profile.thisWeek}
-            favoriteSong={profile.favoriteSong}
-            interests={profile.interests}
-            regularRituals={profile.regularRituals}
-            promptQuestion={profile.promptQuestion}
-            promptAnswer={profile.promptAnswer}
-            matchReasons={profile.matchReasons}
-            onMessage={() => handleMessage(profile.id)}
-            onViewProfile={() => handleViewProfile(profile.id)}
-          />
-        ))}
+        {matches.map((match) => {
+          const partner = match.partner;
+          const firstPhoto = partner.photos?.length
+            ? [...partner.photos].sort((a, b) => a.displayOrder - b.displayOrder)[0]
+            : undefined;
+          const firstPrompt = partner.prompts?.length
+            ? [...partner.prompts].sort((a, b) => a.displayOrder - b.displayOrder)[0]
+            : undefined;
+          const interests = [
+            ...(partner.valuesLifestyle ?? []),
+            ...(partner.lifestylePreferences ?? []),
+          ];
+
+          return (
+            <ProfileCard
+              key={match.id}
+              name={partner.firstName}
+              photoUrl={firstPhoto?.photoData}
+              location={
+                partner.londonAreas?.length > 0
+                  ? partner.londonAreas.join(", ")
+                  : "London"
+              }
+              thisWeekActivities={partner.thisWeekActivities}
+              interests={interests}
+              regularRituals={partner.regularRituals}
+              promptQuestion={firstPrompt?.promptQuestion}
+              promptAnswer={firstPrompt?.promptAnswer}
+              overlapTags={match.overlapTags}
+              onMessage={() => handleMessage(match.id)}
+              onViewProfile={() => handleViewProfile(match.id)}
+            />
+          );
+        })}
       </View>
 
       <View style={styles.footer}>

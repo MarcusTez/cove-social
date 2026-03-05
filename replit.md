@@ -73,7 +73,7 @@ shared/
 2. Auth guard checks authentication state
 3. Login screen (connected to Cove API) or main app
 4. Main app with 4-tab navigation:
-   - **Home**: Weekly introductions with profile cards (or empty "being prepared" state)
+   - **Home**: Weekly introductions fetched from `GET /api/mobile/matches` via React Query; displays profile cards with partner data (photos, overlap tags, activities, prompts, rituals) or empty "being prepared" state; pull-to-refresh supported
    - **Chat**: Conversation list with unread badges → chat thread with message bubbles
    - **Events**: Events listing (placeholder, awaiting backend)
    - **My Profile**: API-connected profile with editable sections; fetches from `GET /profile`, saves via `PATCH /profile`, prompts via CRUD endpoints

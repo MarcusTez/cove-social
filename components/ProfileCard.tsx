@@ -6,18 +6,18 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
 export interface ProfileCardProps {
   name: string;
-  photoUrl: string;
+  photoUrl?: string;
   location: string;
-  thisWeek: string;
-  favoriteSong: string;
-  interests: string[];
-  regularRituals: string[];
-  promptQuestion: string;
-  promptAnswer: string;
-  matchReasons?: string[];
+  thisWeekActivities?: string[];
+  interests?: string[];
+  regularRituals?: string[];
+  promptQuestion?: string;
+  promptAnswer?: string;
+  overlapTags?: string[];
   onMessage: () => void;
   onViewProfile: () => void;
 }
@@ -26,75 +26,83 @@ export function ProfileCard({
   name,
   photoUrl,
   location,
-  thisWeek,
-  favoriteSong,
+  thisWeekActivities,
   interests,
   regularRituals,
   promptQuestion,
   promptAnswer,
-  matchReasons,
+  overlapTags,
   onMessage,
   onViewProfile,
 }: ProfileCardProps) {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Image source={{ uri: photoUrl }} style={styles.avatar} />
+        {photoUrl ? (
+          <Image source={{ uri: photoUrl }} style={styles.avatar} />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Ionicons name="person" size={24} color="#a3a3a3" />
+          </View>
+        )}
         <View style={styles.headerText}>
           <Text style={styles.name}>{name}</Text>
           <Text style={styles.location}>{location}</Text>
         </View>
       </View>
 
-      {matchReasons && matchReasons.length > 0 && (
+      {overlapTags && overlapTags.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Why we think you're a match</Text>
           <View style={styles.tagsContainer}>
-            {matchReasons.map((reason, index) => (
+            {overlapTags.map((tag, index) => (
               <View key={index} style={styles.matchTag}>
-                <Text style={styles.matchTagText}>{reason}</Text>
+                <Text style={styles.matchTagText}>{tag}</Text>
               </View>
             ))}
           </View>
         </View>
       )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>This week I'm probably…</Text>
-        <Text style={styles.sectionValue}>"{thisWeek}"</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Favourite song right now</Text>
-        <Text style={styles.sectionValue}>"{favoriteSong}"</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>{promptQuestion}</Text>
-        <Text style={styles.sectionValue}>"{promptAnswer}"</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Interests</Text>
-        <View style={styles.tagsContainer}>
-          {interests.map((interest, index) => (
-            <View key={index} style={styles.tag}>
-              <Text style={styles.tagText}>{interest}</Text>
-            </View>
-          ))}
+      {thisWeekActivities && thisWeekActivities.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>This week I'm probably…</Text>
+          <Text style={styles.sectionValue}>"{thisWeekActivities.join(", ")}"</Text>
         </View>
-      </View>
+      )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>Regular rituals</Text>
-        <View style={styles.tagsContainer}>
-          {regularRituals.map((ritual, index) => (
-            <View key={index} style={styles.tag}>
-              <Text style={styles.tagText}>{ritual}</Text>
-            </View>
-          ))}
+      {promptQuestion && promptAnswer && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{promptQuestion}</Text>
+          <Text style={styles.sectionValue}>"{promptAnswer}"</Text>
         </View>
-      </View>
+      )}
+
+      {interests && interests.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Interests</Text>
+          <View style={styles.tagsContainer}>
+            {interests.map((interest, index) => (
+              <View key={index} style={styles.tag}>
+                <Text style={styles.tagText}>{interest}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {regularRituals && regularRituals.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Regular rituals</Text>
+          <View style={styles.tagsContainer}>
+            {regularRituals.map((ritual, index) => (
+              <View key={index} style={styles.tag}>
+                <Text style={styles.tagText}>{ritual}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       <View style={styles.actions}>
         <TouchableOpacity
@@ -137,6 +145,10 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: "#e5e5e5",
+  },
+  avatarPlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerText: {
     flex: 1,
