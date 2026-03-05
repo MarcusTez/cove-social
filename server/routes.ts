@@ -34,8 +34,16 @@ async function proxyToCove(req: Request, res: Response) {
       fetchOptions.body = JSON.stringify(req.body);
     }
 
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      console.log(`Proxy: ${req.method} ${path}`, fetchOptions.body ? fetchOptions.body.toString().substring(0, 200) : "(no body)");
+    }
+
     const response = await fetch(targetUrl, fetchOptions);
     const data = await response.text();
+
+    if (!response.ok) {
+      console.error(`Cove API error: ${req.method} ${path} -> ${response.status}`, data);
+    }
 
     res.status(response.status);
 

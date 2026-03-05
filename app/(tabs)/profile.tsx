@@ -485,8 +485,8 @@ export default function MyProfileScreen() {
     setSaveError(null);
     try {
       await profileMutation.mutateAsync(body);
-    } catch (err) {
-      console.error("Failed to save profile field:", err);
+    } catch (err: any) {
+      console.error("Failed to save profile field:", err?.message || err);
       setSaveError("Failed to save changes. Please try again.");
     } finally {
       setIsSaving(false);
