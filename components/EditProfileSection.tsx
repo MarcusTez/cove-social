@@ -22,6 +22,7 @@ interface EditProfileSectionProps {
   maxSelections?: number;
   note?: string;
   visible: boolean;
+  allowOther?: boolean;
 }
 
 export function EditProfileSection({
@@ -34,17 +35,28 @@ export function EditProfileSection({
   maxSelections,
   note,
   visible,
+  allowOther = false,
 }: EditProfileSectionProps) {
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
 
-  const [selectedValues, setSelectedValues] = useState<string[]>(
-    Array.isArray(currentValue) ? currentValue : [currentValue]
+  const optionsSet = new Set(options);
+  const initialValues = Array.isArray(currentValue) ? currentValue : [currentValue];
+  const initialPredefined = initialValues.filter((v) => optionsSet.has(v));
+  const initialCustom = allowOther
+    ? initialValues.filter((v) => v && !optionsSet.has(v))
+    : [];
+
+  const [selectedValues, setSelectedValues] = useState<string[]>(initialPredefined);
+  const [customEntries, setCustomEntries] = useState<string[]>(
+    initialCustom.length > 0 ? initialCustom : []
   );
   const [textValue, setTextValue] = useState<string>(
     typeof currentValue === "string" ? currentValue : ""
   );
+
+  const totalSelected = selectedValues.length + customEntries.filter((v) => v.trim()).length;
 
   const handleToggle = (value: string) => {
     if (type === "single-select") {
@@ -53,12 +65,27 @@ export function EditProfileSection({
       if (selectedValues.includes(value)) {
         setSelectedValues(selectedValues.filter((v) => v !== value));
       } else {
-        if (maxSelections && selectedValues.length >= maxSelections) {
+        if (maxSelections && totalSelected >= maxSelections) {
           return;
         }
         setSelectedValues([...selectedValues, value]);
       }
     }
+  };
+
+  const handleAddOther = () => {
+    if (maxSelections && totalSelected >= maxSelections) return;
+    setCustomEntries([...customEntries, ""]);
+  };
+
+  const handleCustomChange = (index: number, text: string) => {
+    const updated = [...customEntries];
+    updated[index] = text;
+    setCustomEntries(updated);
+  };
+
+  const handleRemoveCustom = (index: number) => {
+    setCustomEntries(customEntries.filter((_, i) => i !== index));
   };
 
   const handleSave = () => {
@@ -67,14 +94,15 @@ export function EditProfileSection({
     } else if (type === "single-select") {
       onSave(selectedValues[0] || "");
     } else {
-      onSave(selectedValues);
+      const validCustom = customEntries.filter((v) => v.trim());
+      onSave([...selectedValues, ...validCustom]);
     }
     onClose();
   };
 
   const isDisabled =
     (type === "text" && !textValue.trim()) ||
-    (type !== "text" && selectedValues.length === 0);
+    (type !== "text" && totalSelected === 0);
 
   const renderOption = ({ item }: { item: string }) => {
     const isSelected = selectedValues.includes(item);
@@ -82,7 +110,7 @@ export function EditProfileSection({
       !isSelected &&
       type === "multi-select" &&
       !!maxSelections &&
-      selectedValues.length >= maxSelections;
+      totalSelected >= maxSelections;
 
     return (
       <TouchableOpacity
@@ -146,12 +174,48 @@ export function EditProfileSection({
             renderItem={renderOption}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
             ListFooterComponent={
               <>
+                {allowOther && type === "multi-select" && (
+                  <View style={styles.otherSection}>
+                    {customEntries.map((entry, index) => (
+                      <View key={`custom-${index}`} style={styles.customEntryRow}>
+                        <TextInput
+                          style={styles.customInput}
+                          value={entry}
+                          onChangeText={(text) => handleCustomChange(index, text)}
+                          placeholder="Type your own..."
+                          placeholderTextColor="#a3a3a3"
+                          autoFocus={entry === ""}
+                        />
+                        <TouchableOpacity
+                          onPress={() => handleRemoveCustom(index)}
+                          style={styles.removeCustomButton}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="close-circle" size={20} color="#a3a3a3" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    <TouchableOpacity
+                      style={[
+                        styles.addOtherButton,
+                        !!(maxSelections && totalSelected >= maxSelections) && styles.optionDisabled,
+                      ]}
+                      onPress={handleAddOther}
+                      disabled={!!(maxSelections && totalSelected >= maxSelections)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="add" size={18} color="#171717" style={{ marginRight: 6 }} />
+                      <Text style={styles.addOtherText}>Other</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
                 {note && <Text style={styles.note}>{note}</Text>}
                 {type === "multi-select" && maxSelections && (
                   <Text style={styles.counter}>
-                    {selectedValues.length} / {maxSelections} selected
+                    {totalSelected} / {maxSelections} selected
                   </Text>
                 )}
               </>
@@ -247,6 +311,46 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
+  },
+  otherSection: {
+    marginTop: 8,
+    gap: 8,
+  },
+  customEntryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  customInput: {
+    flex: 1,
+    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    color: "#171717",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#171717",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  removeCustomButton: {
+    padding: 4,
+  },
+  addOtherButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderStyle: "dashed",
+  },
+  addOtherText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: "#171717",
   },
   note: {
     fontFamily: "Inter_400Regular",

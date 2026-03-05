@@ -404,6 +404,7 @@ type EditingSection = {
   field: DisplayField;
   maxSelections?: number;
   note?: string;
+  allowOther?: boolean;
 } | null;
 
 function SectionHeader({
@@ -543,8 +544,9 @@ export default function MyProfileScreen() {
     field: DisplayField,
     maxSelections?: number,
     note?: string,
+    allowOther?: boolean,
   ) => {
-    setEditing({ key, title, type, options, field, maxSelections, note });
+    setEditing({ key, title, type, options, field, maxSelections, note, allowOther });
   };
 
   if (isLoading) {
@@ -729,7 +731,7 @@ export default function MyProfileScreen() {
           <SectionHeader
             title="What you're doing this week"
             visibility="Visible"
-            onEdit={() => openEditor("thisWeek", "What you're doing this week", "multi-select", THIS_WEEK_OPTIONS, "thisWeek")}
+            onEdit={() => openEditor("thisWeek", "What you're doing this week", "multi-select", THIS_WEEK_OPTIONS, "thisWeek", undefined, undefined, true)}
           />
           <TagList items={profile.thisWeek} />
 
@@ -738,7 +740,7 @@ export default function MyProfileScreen() {
           <SectionHeader
             title="Your regular rituals"
             visibility="Visible"
-            onEdit={() => openEditor("regularRituals", "Your regular rituals", "multi-select", REGULAR_RITUALS_OPTIONS, "regularRituals")}
+            onEdit={() => openEditor("regularRituals", "Your regular rituals", "multi-select", REGULAR_RITUALS_OPTIONS, "regularRituals", undefined, undefined, true)}
           />
           <TagList items={profile.regularRituals} />
 
@@ -783,7 +785,7 @@ export default function MyProfileScreen() {
           <SectionHeader
             title="Upcoming plans"
             visibility="Hidden"
-            onEdit={() => openEditor("upcomingPlans", "Upcoming plans", "multi-select", UPCOMING_PLANS_OPTIONS, "upcomingPlans")}
+            onEdit={() => openEditor("upcomingPlans", "Upcoming plans", "multi-select", UPCOMING_PLANS_OPTIONS, "upcomingPlans", undefined, undefined, true)}
           />
           <TagList items={profile.upcomingPlans} />
 
@@ -878,6 +880,7 @@ export default function MyProfileScreen() {
           onClose={() => setEditing(null)}
           maxSelections={editing.maxSelections}
           note={editing.note}
+          allowOther={editing.allowOther}
         />
       )}
 
