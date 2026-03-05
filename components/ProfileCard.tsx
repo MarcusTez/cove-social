@@ -223,26 +223,26 @@ const styles = StyleSheet.create({
   },
   messageButton: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 12,
+    backgroundColor: "#171717",
+    borderRadius: 24,
     paddingVertical: 14,
     alignItems: "center",
   },
   messageButtonText: {
     fontFamily: "Inter_500Medium",
     fontSize: 15,
-    color: "#171717",
+    color: "#ffffff",
   },
   viewProfileButton: {
     flex: 1,
-    backgroundColor: "#171717",
-    borderRadius: 12,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 24,
     paddingVertical: 14,
     alignItems: "center",
   },
   viewProfileButtonText: {
     fontFamily: "Inter_500Medium",
     fontSize: 15,
-    color: "#fafafa",
+    color: "#171717",
   },
 });
