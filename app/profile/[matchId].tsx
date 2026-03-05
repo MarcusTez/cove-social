@@ -90,12 +90,14 @@ export default function PublicProfileScreen() {
   const createConversationMutation = useMutation({
     mutationFn: async () => {
       if (!partner || !matchId) throw new Error("Missing data");
-      const firstPhoto = photos[0]?.photoData || null;
+      const photoData = photos[0]?.photoData || null;
+      const isBase64 = photoData && (photoData.startsWith("data:") || photoData.length > 500);
+      const safePhotoUrl = photoData && !isBase64 ? photoData : null;
       const res = await apiRequest("POST", "/api/mobile/conversations", {
         matchId,
         partnerId: partner.id,
         partnerName: partner.firstName,
-        partnerPhotoUrl: firstPhoto,
+        partnerPhotoUrl: safePhotoUrl,
         userName: user?.firstName || "You",
         userPhotoUrl: null,
       });

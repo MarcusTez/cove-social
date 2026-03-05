@@ -213,7 +213,15 @@ export async function createConversation(req: Request, res: Response) {
   const userId = await validateTokenAndGetUserId(req.headers.authorization);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const { matchId, partnerId, partnerName, partnerPhotoUrl, userName, userPhotoUrl } = req.body;
+  const { matchId, partnerId, partnerName, userName } = req.body;
+  let { partnerPhotoUrl, userPhotoUrl } = req.body;
+
+  if (partnerPhotoUrl && (partnerPhotoUrl.startsWith("data:") || partnerPhotoUrl.length > 500)) {
+    partnerPhotoUrl = null;
+  }
+  if (userPhotoUrl && (userPhotoUrl.startsWith("data:") || userPhotoUrl.length > 500)) {
+    userPhotoUrl = null;
+  }
 
   if (!matchId || !partnerId || !partnerName) {
     return res.status(400).json({ error: "matchId, partnerId, and partnerName are required" });

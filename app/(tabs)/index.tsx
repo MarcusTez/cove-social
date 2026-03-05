@@ -102,11 +102,15 @@ export default function HomeScreen() {
         ? [...partner.photos].sort((a, b) => a.displayOrder - b.displayOrder)[0]
         : undefined;
 
+      const photoUrl = firstPhoto?.photoData || null;
+      const isBase64 = photoUrl && (photoUrl.startsWith("data:") || photoUrl.length > 500);
+      const safePhotoUrl = photoUrl && !isBase64 ? photoUrl : null;
+
       const res = await apiRequest("POST", "/api/mobile/conversations", {
         matchId,
         partnerId: partner.id,
         partnerName: partner.firstName,
-        partnerPhotoUrl: firstPhoto?.photoData || null,
+        partnerPhotoUrl: safePhotoUrl,
         userName: user.firstName || "You",
         userPhotoUrl: null,
       });
