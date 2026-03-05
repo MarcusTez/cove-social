@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   View,
   Text,
@@ -6,11 +7,14 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { ProfileCard } from "@/components/ProfileCard";
+import { apiRequest, queryClient } from "@/lib/query-client";
+import { useAuth } from "@/lib/auth";
 
 interface MatchPhoto {
   id: string;
@@ -70,7 +74,9 @@ interface MatchesResponse {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useAuth();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
+  const [pendingMatchId, setPendingMatchId] = useState<string | null>(null);
 
   const {
     data,
@@ -85,7 +91,33 @@ export default function HomeScreen() {
   const matches = data?.matches ?? [];
   const hasIntroductions = matches.length > 0;
 
-  const handleMessage = (matchId: string) => {
+  const handleMessage = async (matchId: string) => {
+    const match = matches.find((m) => m.id === matchId);
+    if (!match || !user) return;
+
+    setPendingMatchId(matchId);
+    try {
+      const partner = match.partner;
+      const firstPhoto = partner.photos?.length
+        ? [...partner.photos].sort((a, b) => a.displayOrder - b.displayOrder)[0]
+        : undefined;
+
+      const res = await apiRequest("POST", "/api/mobile/conversations", {
+        matchId,
+        partnerId: partner.id,
+        partnerName: partner.firstName,
+        partnerPhotoUrl: firstPhoto?.photoData || null,
+        userName: user.firstName || "You",
+        userPhotoUrl: null,
+      });
+      const data = await res.json();
+      queryClient.invalidateQueries({ queryKey: ["/api/mobile/conversations"] });
+      router.push(`/chat/${data.id}`);
+    } catch {
+      Alert.alert("Error", "Could not start conversation. Please try again.");
+    } finally {
+      setPendingMatchId(null);
+    }
   };
 
   const handleViewProfile = (matchId: string) => {
@@ -189,6 +221,7 @@ export default function HomeScreen() {
               overlapTags={match.overlapTags}
               onMessage={() => handleMessage(match.id)}
               onViewProfile={() => handleViewProfile(match.id)}
+              messageLoading={pendingMatchId === match.id}
             />
           );
         })}

@@ -25,6 +25,7 @@ export interface ProfileCardProps {
   overlapTags?: string[];
   onMessage: () => void;
   onViewProfile: () => void;
+  messageLoading?: boolean;
 }
 
 export function ProfileCard({
@@ -37,6 +38,7 @@ export function ProfileCard({
   overlapTags,
   onMessage,
   onViewProfile,
+  messageLoading,
 }: ProfileCardProps) {
   return (
     <View style={styles.card}>
@@ -112,12 +114,15 @@ export function ProfileCard({
 
       <View style={styles.actions}>
         <TouchableOpacity
-          style={styles.messageButton}
+          style={[styles.messageButton, messageLoading && { opacity: 0.6 }]}
           onPress={onMessage}
           activeOpacity={0.8}
+          disabled={messageLoading}
           testID={`message-${name}`}
         >
-          <Text style={styles.messageButtonText}>Message</Text>
+          <Text style={styles.messageButtonText}>
+            {messageLoading ? "Opening..." : "Message"}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.viewProfileButton}
