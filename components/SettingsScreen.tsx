@@ -63,19 +63,22 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
   const [formSubject, setFormSubject] = useState("");
   const [formMessage, setFormMessage] = useState("");
   const [isSubmittingForm, setIsSubmittingForm] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = () => {
-    Alert.alert("Log out", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Log out",
-        style: "destructive",
-        onPress: async () => {
-          await logout();
-          onClose();
-        },
-      },
-    ]);
+    setShowLogoutConfirm(true);
+  };
+
+  const handleLogoutConfirmed = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } catch {
+    }
+    setIsLoggingOut(false);
+    setShowLogoutConfirm(false);
+    onClose();
   };
 
   const handleCloseDelete = () => {
@@ -228,6 +231,52 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
                   {isSafety ? "Submit report" : "Send message"}
                 </Text>
               )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
+  if (showLogoutConfirm) {
+    return (
+      <Modal visible={visible} animationType="slide" onRequestClose={() => setShowLogoutConfirm(false)}>
+        <View
+          style={[
+            styles.container,
+            {
+              paddingTop: insets.top + webTopInset,
+              paddingBottom: Math.max(insets.bottom, webBottomInset) + 12,
+            },
+          ]}
+        >
+          <View style={styles.logoutContent}>
+            <Text style={styles.logoutTitle}>Log out?</Text>
+            <Text style={styles.logoutSubtitle}>
+              Are you sure you want to log out of your account?
+            </Text>
+          </View>
+
+          <View style={styles.deleteActions}>
+            <TouchableOpacity
+              style={styles.logoutConfirmButton}
+              onPress={handleLogoutConfirmed}
+              disabled={isLoggingOut}
+              activeOpacity={0.7}
+              testID="confirm-logout-button"
+            >
+              {isLoggingOut ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Text style={styles.logoutConfirmText}>Log out</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={() => setShowLogoutConfirm(false)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -693,5 +742,36 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     fontSize: 15,
     color: "#dc2626",
+  },
+  logoutContent: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  logoutTitle: {
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 26,
+    color: "#171717",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  logoutSubtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    color: "#737373",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  logoutConfirmButton: {
+    backgroundColor: "#dc2626",
+    borderRadius: 28,
+    paddingVertical: 16,
+    alignItems: "center" as const,
+  },
+  logoutConfirmText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: "#ffffff",
   },
 });
