@@ -71,8 +71,8 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
         text: "Log out",
         style: "destructive",
         onPress: async () => {
-          onClose();
           await logout();
+          onClose();
         },
       },
     ]);
