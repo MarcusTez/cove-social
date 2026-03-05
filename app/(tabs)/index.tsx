@@ -171,9 +171,9 @@ export default function HomeScreen() {
           const firstPhoto = partner.photos?.length
             ? [...partner.photos].sort((a, b) => a.displayOrder - b.displayOrder)[0]
             : undefined;
-          const firstPrompt = partner.prompts?.length
-            ? [...partner.prompts].sort((a, b) => a.displayOrder - b.displayOrder)[0]
-            : undefined;
+          const sortedPrompts = partner.prompts?.length
+            ? [...partner.prompts].sort((a, b) => a.displayOrder - b.displayOrder)
+            : [];
           const interests = [
             ...(partner.valuesLifestyle ?? []),
             ...(partner.lifestylePreferences ?? []),
@@ -192,8 +192,7 @@ export default function HomeScreen() {
               thisWeekActivities={partner.thisWeekActivities}
               interests={interests}
               regularRituals={partner.regularRituals}
-              promptQuestion={firstPrompt?.promptQuestion}
-              promptAnswer={firstPrompt?.promptAnswer}
+              prompts={sortedPrompts}
               overlapTags={match.overlapTags}
               onMessage={() => handleMessage(match.id)}
               onViewProfile={() => handleViewProfile(match.id)}

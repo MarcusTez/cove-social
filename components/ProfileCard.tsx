@@ -8,6 +8,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+interface PromptItem {
+  promptQuestion: string;
+  promptAnswer: string;
+}
+
 export interface ProfileCardProps {
   name: string;
   photoUrl?: string;
@@ -15,8 +20,7 @@ export interface ProfileCardProps {
   thisWeekActivities?: string[];
   interests?: string[];
   regularRituals?: string[];
-  promptQuestion?: string;
-  promptAnswer?: string;
+  prompts?: PromptItem[];
   overlapTags?: string[];
   onMessage: () => void;
   onViewProfile: () => void;
@@ -29,8 +33,7 @@ export function ProfileCard({
   thisWeekActivities,
   interests,
   regularRituals,
-  promptQuestion,
-  promptAnswer,
+  prompts,
   overlapTags,
   onMessage,
   onViewProfile,
@@ -64,17 +67,23 @@ export function ProfileCard({
         </View>
       )}
 
+      {prompts && prompts.length > 0 && prompts.map((prompt, index) => (
+        <View key={index} style={styles.section}>
+          <Text style={styles.sectionLabel}>{prompt.promptQuestion}</Text>
+          <Text style={styles.sectionValue}>"{prompt.promptAnswer}"</Text>
+        </View>
+      ))}
+
       {thisWeekActivities && thisWeekActivities.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>This week I'm probably…</Text>
-          <Text style={styles.sectionValue}>"{thisWeekActivities.join(", ")}"</Text>
-        </View>
-      )}
-
-      {promptQuestion && promptAnswer && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>{promptQuestion}</Text>
-          <Text style={styles.sectionValue}>"{promptAnswer}"</Text>
+          <View style={styles.tagsContainer}>
+            {thisWeekActivities.map((activity, index) => (
+              <View key={index} style={styles.tag}>
+                <Text style={styles.tagText}>{activity}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       )}
 
