@@ -251,9 +251,6 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
           </View>
           <View style={styles.divider} />
 
-          <SettingsRow label="Manage subscription" onPress={() => {}} />
-          <View style={styles.divider} />
-
           <View style={styles.sectionSpacer} />
           <Text style={styles.sectionTitle}>Safety</Text>
 
