@@ -31,6 +31,8 @@ app/
     profile.tsx         # My Profile tab - API-connected editable profile
   chat/
     [id].tsx            # Chat thread (full screen, no tab bar)
+  profile/
+    [matchId].tsx       # Public profile screen (match partner detail view)
 components/
   CoveSplash.tsx        # Animated splash screen
   ProfileCard.tsx       # Profile introduction card component
@@ -73,7 +75,7 @@ shared/
 2. Auth guard checks authentication state
 3. Login screen (connected to Cove API) or main app
 4. Main app with 4-tab navigation:
-   - **Home**: Weekly introductions fetched from `GET /api/mobile/matches` via React Query; displays profile cards with partner data (photos, overlap tags, activities, prompts, rituals) or empty "being prepared" state; pull-to-refresh supported
+   - **Home**: Weekly introductions fetched from `GET /api/mobile/matches` via React Query; displays profile cards with partner data (photos, overlap tags, activities, prompts, rituals) or empty "being prepared" state; pull-to-refresh supported; "View profile" navigates to public profile screen
    - **Chat**: Conversation list with unread badges → chat thread with message bubbles
    - **Events**: Events listing (placeholder, awaiting backend)
    - **My Profile**: API-connected profile with editable sections; fetches from `GET /profile`, saves via `PATCH /profile`, prompts via CRUD endpoints

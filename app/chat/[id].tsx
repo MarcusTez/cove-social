@@ -167,6 +167,7 @@ export default function ChatThreadScreen() {
 
   const handleViewProfile = () => {
     setShowMenu(false);
+    router.push(`/profile/${id}`);
   };
 
   return (
@@ -186,7 +187,9 @@ export default function ChatThreadScreen() {
             <Ionicons name="arrow-back" size={22} color="#171717" />
           </TouchableOpacity>
 
-          <Image source={{ uri: contact.photoUrl }} style={styles.headerAvatar} />
+          <TouchableOpacity onPress={handleViewProfile} activeOpacity={0.7}>
+            <Image source={{ uri: contact.photoUrl }} style={styles.headerAvatar} />
+          </TouchableOpacity>
           <Text style={styles.headerName}>{contact.name}</Text>
 
           <View>

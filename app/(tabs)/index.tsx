@@ -8,6 +8,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { ProfileCard } from "@/components/ProfileCard";
 
@@ -68,6 +69,7 @@ interface MatchesResponse {
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   const {
@@ -87,6 +89,7 @@ export default function HomeScreen() {
   };
 
   const handleViewProfile = (matchId: string) => {
+    router.push(`/profile/${matchId}`);
   };
 
   if (isLoading) {
