@@ -6,7 +6,7 @@ import { eq, and, desc, lt, ne, gt, sql, count } from "drizzle-orm";
 const userIdCache = new Map<string, { userId: string; expiresAt: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-const COVE_API_BASE = process.env.EXPO_PUBLIC_COVE_API_URL || "https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile";
+const COVE_API_BASE = process.env.EXPO_PUBLIC_COVE_API_URL || "https://www.cove-social.com/api/mobile";
 
 export async function validateTokenAndGetUserId(authHeader: string | undefined): Promise<string | null> {
   if (!authHeader?.startsWith("Bearer ")) return null;

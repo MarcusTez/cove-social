@@ -101,7 +101,7 @@ shared/
 
 ## Environment Variables
 
-- `EXPO_PUBLIC_COVE_API_URL`: Base URL for the Cove API (dev: `https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile`)
+- `EXPO_PUBLIC_COVE_API_URL`: Base URL for the Cove API (environment-scoped: dev uses `https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile`, production uses `https://www.cove-social.com/api/mobile`)
 - `EXPO_PUBLIC_DOMAIN`: Auto-set by Replit for the Express backend URL
 - `DATABASE_URL`: PostgreSQL connection string (auto-set by Replit)
 

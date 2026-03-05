@@ -10,7 +10,7 @@ import {
 } from "./chat";
 import { setupSocketIO } from "./socket";
 
-const COVE_API_BASE = process.env.EXPO_PUBLIC_COVE_API_URL || "https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile";
+const COVE_API_BASE = process.env.EXPO_PUBLIC_COVE_API_URL || "https://www.cove-social.com/api/mobile";
 
 async function proxyToCove(req: Request, res: Response) {
   const path = req.path.replace("/api/mobile", "");
