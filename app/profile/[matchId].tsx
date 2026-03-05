@@ -181,11 +181,7 @@ export default function PublicProfileScreen() {
         <View style={styles.content}>
           <View style={styles.nameSection}>
             <Text style={styles.name}>{partner.firstName}</Text>
-            <Text style={styles.meta}>
-              {partner.londonAreas?.length > 0
-                ? partner.londonAreas.join(", ")
-                : "London"}
-            </Text>
+            <Text style={styles.meta}>London</Text>
             {partner.gender && <Text style={styles.meta}>{partner.gender}</Text>}
           </View>
 

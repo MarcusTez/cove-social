@@ -182,11 +182,7 @@ export default function HomeScreen() {
               key={match.id}
               name={partner.firstName}
               photoUrl={firstPhoto?.photoData}
-              location={
-                partner.londonAreas?.length > 0
-                  ? partner.londonAreas.join(", ")
-                  : "London"
-              }
+              location="London"
               thisWeekActivities={partner.thisWeekActivities}
               regularRituals={partner.regularRituals}
               prompts={sortedPrompts}
