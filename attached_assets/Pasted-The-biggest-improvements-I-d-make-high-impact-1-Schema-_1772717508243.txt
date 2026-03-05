@@ -1,0 +1,87 @@
+The biggest improvements I’d make (high impact)
+1) Schema: don’t hardcode participant1/participant2
+
+Instead of participant1Id + participant2Id, use a join table:
+
+conversations
+
+id, matchId, createdAt, updatedAt, lastMessageAt, lastMessageId (optional but very useful)
+
+conversation_participants
+
+conversationId
+
+userId
+
+lastReadAt or lastReadMessageId
+
+muted, archived (optional)
+
+Why: even if you think it’s always 1:1, this structure makes unread counts, blocking, archival, and future group chat trivial. With participant1/2 you’ll constantly write conditional logic.
+
+2) Unread count: avoid readAt on every message (it gets expensive)
+
+For MVP you can keep messages.readAt, but it doesn’t scale well because you’ll be updating lots of rows.
+
+Better:
+
+Keep read state per participant: conversation_participants.lastReadAt
+
+Unread count = count(messages where createdAt > lastReadAt AND senderId != me)
+
+Much cheaper and simpler.
+
+3) Pagination: use cursor pagination, not limit/offset
+
+Offset pagination becomes slow and buggy with realtime inserts.
+
+Use:
+GET /messages?cursor=<createdAt|id>&limit=30 (fetch older)
+Return nextCursor.
+
+4) Reliability: add acknowledgements + idempotency
+
+Socket messaging without ack/idempotency will eventually duplicate messages (network reconnects, retries).
+
+Add:
+
+Client sends clientMessageId (UUID)
+
+DB has unique constraint on (conversationId, clientMessageId)
+
+Server responds with message:sent ack including server messageId + timestamps
+
+5) Presence + push notifications (or chat feels “fake”)
+
+Socket covers foreground. You still need push for backgrounded users.
+
+Add a device_tokens table and send push when:
+
+recipient is not connected to that conversation room / not online
+
+If you skip this, users will miss messages unless they’re in-app.
+
+Replit-specific caution (important)
+
+Socket.IO can work fine as long as your server stays awake and you’re not horizontally scaling. If you ever run multiple instances, you’ll need a Redis adapter (pub/sub) so messages reach users connected to different instances.
+
+For MVP on Replit: OK.
+For growth: plan a path (Redis adapter or move realtime to Ably/Pusher/Supabase Realtime).
+
+Smaller tweaks to their task list
+
+T002 auth: don’t call /profile on every request. Either:
+
+decode JWT locally (verify signature), or
+
+call /profile once at login and cache userId in session/token payload.
+
+T003 room join: don’t auto-join all conversations on connect if a user has many. Better:
+
+join on chat screen open
+
+leave on chat screen close
+
+keep a “user:{id}” room for list updates
+
+Conversation list ordering: add lastMessageAt on conversation for fast sorting.
