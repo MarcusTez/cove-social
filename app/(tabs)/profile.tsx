@@ -57,6 +57,7 @@ interface ApiProfile {
   friendshipValues: string[];
   friendshipPractical: string[];
   problemReasons: string[];
+  city: string;
   instagramHandle: string;
   linkedinUrl: string;
   commitmentLevel: string;
@@ -75,6 +76,7 @@ interface DisplayProfile {
   photoIds: (string | null)[];
   name: string;
   gender: string;
+  city: string;
   prompts: { id?: string; question: string; answer: string }[];
   thisWeek: string[];
   regularRituals: string[];
@@ -111,6 +113,7 @@ function mapApiToDisplay(api: ApiProfile): DisplayProfile {
     photoIds: photoIdSlots,
     name: [api.firstName, api.lastName].filter(Boolean).join(" "),
     gender: api.gender || "",
+    city: api.city || "",
     prompts: (api.prompts || [])
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map((p) => ({ id: p.id, question: p.promptQuestion, answer: p.promptAnswer })),
@@ -170,6 +173,8 @@ function mapFieldToApiBody(field: DisplayField, value: string | string[], apiPro
       const parts = (value as string).trim().split(/\s+/);
       return { firstName: parts[0] || "", lastName: parts.slice(1).join(" ") || "" };
     }
+    case "city":
+      return { city: value };
     case "thisWeek":
       return { thisWeekActivities: value };
     case "whyHere":
@@ -601,6 +606,22 @@ export default function MyProfileScreen() {
               <Text style={styles.basicFieldValue}>{profile.gender}</Text>
             </View>
           </View>
+
+          <TouchableOpacity
+            style={styles.basicFieldCard}
+            onPress={() =>
+              setEditingBasicField({
+                key: "city", title: "City", type: "text", options: [], field: "city",
+              })
+            }
+            activeOpacity={0.6}
+          >
+            <View>
+              <Text style={styles.basicFieldLabel}>City</Text>
+              <Text style={styles.basicFieldValue}>{profile.city || "Not set"}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
+          </TouchableOpacity>
         </View>
 
         {editingBasicField && (
@@ -683,6 +704,10 @@ export default function MyProfileScreen() {
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Gender:</Text>
               <Text style={styles.infoValue}>{profile.gender || "Not set"}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>City:</Text>
+              <Text style={styles.infoValue}>{profile.city || "Not set"}</Text>
             </View>
           </View>
 
