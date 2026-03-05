@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -10,99 +10,58 @@ import {
   Platform,
   Pressable,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { BlockModal } from "@/components/BlockModal";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth";
+import { useSocket, generateClientMessageId } from "@/lib/socket";
+import { apiRequest, queryClient } from "@/lib/query-client";
 
-interface Message {
-  id: number;
-  text: string;
-  sender: "me" | "them";
-  timestamp: string;
+interface MessageItem {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  clientMessageId: string;
+  content: string;
+  createdAt: string;
+  pending?: boolean;
 }
 
-const MOCK_CONTACTS: Record<
-  string,
-  { name: string; photoUrl: string }
-> = {
-  "1": {
-    name: "Lena",
-    photoUrl:
-      "https://images.unsplash.com/photo-1762522921456-cdfe882d36c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx5b3VuZyUyMHByb2Zlc3Npb25hbCUyMHdvbWFuJTIwcG9ydHJhaXQlMjBzbWlsaW5nfGVufDF8fHx8MTc3MjQ1NzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080",
-  },
-  "2": {
-    name: "Marcus",
-    photoUrl:
-      "https://images.unsplash.com/photo-1764084051711-45a3b7c84c06?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBtYW4lMjBjYXN1YWwlMjBwb3J0cmFpdCUyMGhhcHB5fGVufDF8fHx8MTc3MjQ1NzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080",
-  },
-  "3": {
-    name: "Sofia",
-    photoUrl:
-      "https://images.unsplash.com/photo-1758599543120-4e462429a4d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3b21hbiUyMHByb2Zlc3Npb25hbCUyMHBvcnRyYWl0JTIwb3V0ZG9vcnxlbnwxfHx8fDE3NzI0NTc0Nzh8MA&ixlib=rb-4.1.0&q=80&w=1080",
-  },
-  "4": {
-    name: "James",
-    photoUrl:
-      "https://images.unsplash.com/photo-1762708550141-2688121b9ebd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx5b3VuZyUyMG1hbiUyMGNyZWF0aXZlJTIwcHJvZmVzc2lvbmFsJTIwcG9ydHJhaXR8ZW58MXx8fHwxNzcyNDU3NDc4fDA&ixlib=rb-4.1.0&q=80&w=1080",
-  },
-  "5": {
-    name: "Aisha",
-    photoUrl:
-      "https://images.unsplash.com/photo-1771430905474-11adef6fe314?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB3b21hbiUyMHBvcnRyYWl0JTIwbGlmZXN0eWxlfGVufDF8fHx8MTc3MjQ1NzQ3OHww&ixlib=rb-4.1.0&q=80&w=1080",
-  },
-};
+interface ConversationData {
+  id: string;
+  matchId: string;
+  partner: {
+    userId: string;
+    displayName: string;
+    photoUrl: string | null;
+  } | null;
+  lastMessage: {
+    content: string;
+    senderId: string;
+    createdAt: string;
+  } | null;
+  unreadCount: number;
+  lastMessageAt: string | null;
+  createdAt: string;
+}
 
-const MOCK_MESSAGES: Message[] = [
-  {
-    id: 1,
-    text: "Hey! Love your intro profile \u2013 that Sunday ritual sounds perfect \u2600\uFE0F",
-    sender: "them",
-    timestamp: "9:15 AM",
-  },
-  {
-    id: 2,
-    text: "Thanks! Yeah it's my favourite part of the week honestly",
-    sender: "me",
-    timestamp: "9:18 AM",
-  },
-  {
-    id: 3,
-    text: "I saw you mentioned the comedy night \u2013 any recommendations?",
-    sender: "them",
-    timestamp: "9:20 AM",
-  },
-  {
-    id: 4,
-    text: "Oh definitely! There's this new place in Shoreditch that does open mic nights. Really intimate vibe",
-    sender: "me",
-    timestamp: "9:22 AM",
-  },
-  {
-    id: 5,
-    text: "That sounds great. Would love to check it out sometime",
-    sender: "them",
-    timestamp: "9:25 AM",
-  },
-  {
-    id: 6,
-    text: "For sure! They do it every Thursday. Let me know if you fancy going",
-    sender: "me",
-    timestamp: "9:28 AM",
-  },
-  {
-    id: 7,
-    text: "Perfect timing actually \u2013 I'm free this Thursday",
-    sender: "them",
-    timestamp: "10:30 AM",
-  },
-];
+function formatTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
-function MessageBubble({ message }: { message: Message }) {
-  const isMe = message.sender === "me";
-
+function MessageBubble({
+  message,
+  isMe,
+}: {
+  message: MessageItem;
+  isMe: boolean;
+}) {
   return (
     <View
       style={[
@@ -114,6 +73,7 @@ function MessageBubble({ message }: { message: Message }) {
         style={[
           styles.bubble,
           isMe ? styles.bubbleMe : styles.bubbleThem,
+          message.pending && styles.bubblePending,
         ]}
       >
         <Text
@@ -122,7 +82,7 @@ function MessageBubble({ message }: { message: Message }) {
             isMe ? styles.bubbleTextMe : styles.bubbleTextThem,
           ]}
         >
-          {message.text}
+          {message.content}
         </Text>
         <Text
           style={[
@@ -130,7 +90,7 @@ function MessageBubble({ message }: { message: Message }) {
             isMe ? styles.bubbleTimeMe : styles.bubbleTimeThem,
           ]}
         >
-          {message.timestamp}
+          {message.pending ? "Sending..." : formatTime(message.createdAt)}
         </Text>
       </View>
     </View>
@@ -141,19 +101,178 @@ export default function ChatThreadScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
+  const socket = useSocket();
   const [messageText, setMessageText] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [localMessages, setLocalMessages] = useState<MessageItem[]>([]);
+  const [isPartnerTyping, setIsPartnerTyping] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flatListRef = useRef<FlatList>(null);
 
-  const contact = MOCK_CONTACTS[id || "1"] || MOCK_CONTACTS["1"];
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
 
-  const handleSend = () => {
-    if (messageText.trim()) {
-      setMessageText("");
+  const { data: conversationsData } = useQuery<ConversationData[]>({
+    queryKey: ["/api/mobile/conversations"],
+  });
+
+  const conversation = conversationsData?.find((c) => c.id === id);
+  const contact = conversation?.partner;
+
+  const {
+    data: messagesData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: isLoadingMessages,
+  } = useInfiniteQuery<{ messages: MessageItem[]; nextCursor: string | null }>({
+    queryKey: ["/api/mobile/conversations", id, "messages"],
+    queryFn: async ({ pageParam }) => {
+      const url = pageParam
+        ? `/api/mobile/conversations/${id}/messages?cursor=${pageParam}&limit=30`
+        : `/api/mobile/conversations/${id}/messages?limit=30`;
+      const res = await apiRequest("GET", url);
+      return await res.json();
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    initialPageParam: undefined as string | undefined,
+    enabled: !!id,
+  });
+
+  const serverMessages =
+    messagesData?.pages.flatMap((page) => page.messages) ?? [];
+
+  const allMessages = [...localMessages, ...serverMessages].reduce<
+    MessageItem[]
+  >((acc, msg) => {
+    if (!acc.find((m) => m.clientMessageId === msg.clientMessageId)) {
+      acc.push(msg);
     }
-  };
+    return acc;
+  }, []);
+
+  allMessages.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  useEffect(() => {
+    if (!socket || !id) return;
+
+    socket.emit("join_conversation", id);
+
+    const handleNewMessage = (msg: MessageItem) => {
+      if (msg.conversationId !== id) return;
+
+      setLocalMessages((prev) => {
+        const filtered = prev.filter(
+          (m) => m.clientMessageId !== msg.clientMessageId
+        );
+        return [...filtered, msg];
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["/api/mobile/conversations"],
+      });
+    };
+
+    const handleMessageAck = (ack: MessageItem & { duplicate: boolean }) => {
+      setLocalMessages((prev) =>
+        prev.map((m) =>
+          m.clientMessageId === ack.clientMessageId
+            ? { ...ack, pending: false }
+            : m
+        )
+      );
+    };
+
+    const handleTyping = (data: { conversationId: string; userId: string }) => {
+      if (data.conversationId === id && data.userId !== user?.id) {
+        setIsPartnerTyping(true);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+          setIsPartnerTyping(false);
+        }, 3000);
+      }
+    };
+
+    const handleStopTyping = (data: {
+      conversationId: string;
+      userId: string;
+    }) => {
+      if (data.conversationId === id && data.userId !== user?.id) {
+        setIsPartnerTyping(false);
+      }
+    };
+
+    socket.on("new_message", handleNewMessage);
+    socket.on("message:ack", handleMessageAck);
+    socket.on("typing", handleTyping);
+    socket.on("stop_typing", handleStopTyping);
+
+    return () => {
+      socket.emit("leave_conversation", id);
+      socket.off("new_message", handleNewMessage);
+      socket.off("message:ack", handleMessageAck);
+      socket.off("typing", handleTyping);
+      socket.off("stop_typing", handleStopTyping);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, [socket, id, user?.id]);
+
+  useEffect(() => {
+    if (!id) return;
+
+    apiRequest("PATCH", `/api/mobile/conversations/${id}/read`).catch(() => {});
+
+    queryClient.invalidateQueries({
+      queryKey: ["/api/mobile/conversations"],
+    });
+  }, [id]);
+
+  const handleSend = useCallback(() => {
+    if (!messageText.trim() || !socket || !id || !user) return;
+
+    const content = messageText.trim();
+    const clientMessageId = generateClientMessageId();
+
+    setMessageText("");
+
+    const optimisticMessage: MessageItem = {
+      id: clientMessageId,
+      conversationId: id,
+      senderId: user.id,
+      clientMessageId,
+      content,
+      createdAt: new Date().toISOString(),
+      pending: true,
+    };
+
+    setLocalMessages((prev) => [...prev, optimisticMessage]);
+
+    socket.emit("send_message", {
+      conversationId: id,
+      content,
+      clientMessageId,
+    });
+
+    socket.emit("stop_typing", id);
+  }, [messageText, socket, id, user]);
+
+  const handleTextChange = useCallback(
+    (text: string) => {
+      setMessageText(text);
+      if (!socket || !id) return;
+
+      if (text.length > 0) {
+        socket.emit("typing", id);
+      } else {
+        socket.emit("stop_typing", id);
+      }
+    },
+    [socket, id]
+  );
 
   const handleBlock = () => {
     setShowBlockModal(false);
@@ -162,12 +281,17 @@ export default function ChatThreadScreen() {
 
   const handleReport = () => {
     setShowMenu(false);
-    Alert.alert("Report submitted", "Thank you for reporting. We'll review this.");
+    Alert.alert(
+      "Report submitted",
+      "Thank you for reporting. We'll review this."
+    );
   };
 
   const handleViewProfile = () => {
     setShowMenu(false);
-    router.push(`/profile/${id}`);
+    if (conversation?.matchId) {
+      router.push(`/profile/${conversation.matchId}`);
+    }
   };
 
   return (
@@ -176,7 +300,9 @@ export default function ChatThreadScreen() {
       behavior="padding"
       keyboardVerticalOffset={0}
     >
-      <View style={[styles.container, { paddingTop: insets.top + webTopInset }]}>
+      <View
+        style={[styles.container, { paddingTop: insets.top + webTopInset }]}
+      >
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() => router.back()}
@@ -188,9 +314,27 @@ export default function ChatThreadScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleViewProfile} activeOpacity={0.7}>
-            <Image source={{ uri: contact.photoUrl }} style={styles.headerAvatar} />
+            {contact?.photoUrl ? (
+              <Image
+                source={{ uri: contact.photoUrl }}
+                style={styles.headerAvatar}
+              />
+            ) : (
+              <View style={[styles.headerAvatar, styles.headerAvatarPlaceholder]}>
+                <Text style={styles.headerAvatarText}>
+                  {contact?.displayName?.charAt(0) || "?"}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
-          <Text style={styles.headerName}>{contact.name}</Text>
+          <View style={styles.headerNameContainer}>
+            <Text style={styles.headerName}>
+              {contact?.displayName || "Chat"}
+            </Text>
+            {isPartnerTyping && (
+              <Text style={styles.typingIndicator}>typing...</Text>
+            )}
+          </View>
 
           <View>
             <TouchableOpacity
@@ -234,7 +378,9 @@ export default function ChatThreadScreen() {
                     activeOpacity={0.6}
                     testID="menu-report"
                   >
-                    <Text style={styles.dropdownItemTextDestructive}>Report user</Text>
+                    <Text style={styles.dropdownItemTextDestructive}>
+                      Report user
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -242,27 +388,67 @@ export default function ChatThreadScreen() {
           </View>
         </View>
 
-        <FlatList
-          data={[...MOCK_MESSAGES].reverse()}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => <MessageBubble message={item} />}
-          contentContainerStyle={styles.messagesList}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          inverted
-          keyboardDismissMode="interactive"
-        />
+        {isLoadingMessages ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#737373" />
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={allMessages}
+            keyExtractor={(item) => item.clientMessageId || item.id}
+            renderItem={({ item }) => (
+              <MessageBubble
+                message={item}
+                isMe={item.senderId === user?.id}
+              />
+            )}
+            contentContainerStyle={styles.messagesList}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            inverted
+            keyboardDismissMode="interactive"
+            onEndReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <ActivityIndicator
+                  size="small"
+                  color="#737373"
+                  style={{ marginVertical: 16 }}
+                />
+              ) : null
+            }
+            ListHeaderComponent={
+              isPartnerTyping ? (
+                <View style={[styles.bubbleRow, styles.bubbleRowThem]}>
+                  <View style={[styles.bubble, styles.bubbleThem]}>
+                    <Text style={[styles.bubbleText, styles.bubbleTextThem]}>
+                      ...
+                    </Text>
+                  </View>
+                </View>
+              ) : null
+            }
+          />
+        )}
 
         <View
           style={[
             styles.composer,
-            { paddingBottom: Math.max(insets.bottom, webBottomInset) + 8 },
+            {
+              paddingBottom: Math.max(insets.bottom, webBottomInset) + 8,
+            },
           ]}
         >
           <TextInput
             style={styles.composerInput}
             value={messageText}
-            onChangeText={setMessageText}
+            onChangeText={handleTextChange}
             placeholder="Message..."
             placeholderTextColor="#a3a3a3"
             multiline={false}
@@ -284,7 +470,7 @@ export default function ChatThreadScreen() {
       </View>
 
       <BlockModal
-        name={contact.name}
+        name={contact?.displayName || "this user"}
         visible={showBlockModal}
         onClose={() => setShowBlockModal(false)}
         onConfirm={handleBlock}
@@ -321,11 +507,28 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: "#e5e5e5",
   },
+  headerAvatarPlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#d4d4d4",
+  },
+  headerAvatarText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: "#ffffff",
+  },
+  headerNameContainer: {
+    flex: 1,
+  },
   headerName: {
     fontFamily: "Inter_500Medium",
     fontSize: 18,
     color: "#171717",
-    flex: 1,
+  },
+  typingIndicator: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "#737373",
   },
   menuButton: {
     padding: 6,
@@ -370,6 +573,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#dc2626",
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   messagesList: {
     paddingHorizontal: 16,
     paddingVertical: 16,
@@ -397,6 +605,9 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f5",
     borderWidth: 1,
     borderColor: "#e5e5e5",
+  },
+  bubblePending: {
+    opacity: 0.7,
   },
   bubbleText: {
     fontSize: 15,

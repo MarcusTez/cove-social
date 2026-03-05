@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import { fetch } from "expo/fetch";
 import * as SecureStore from "expo-secure-store";
 import { setAccessToken, getAccessToken, queryClient } from "@/lib/query-client";
+import { connectSocket, disconnectSocket } from "@/lib/socket";
 
 const REFRESH_TOKEN_KEY = "cove_refresh_token";
 
@@ -132,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileRes.ok) {
         const profileData = await profileRes.json();
         setUser(profileData);
+        connectSocket(profileData.id);
         return true;
       }
 
@@ -167,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await storeRefreshToken(data.refreshToken);
     queryClient.clear();
     setUser(data.user);
+    connectSocket(data.user.id);
   }, []);
 
   const logout = useCallback(async () => {
@@ -186,6 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // silent fail - still clear local state
     }
 
+    disconnectSocket();
     setAccessToken(null);
     await removeRefreshToken();
     queryClient.clear();

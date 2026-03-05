@@ -1,3 +1,4 @@
+import { useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,108 +7,115 @@ import {
   FlatList,
   StyleSheet,
   Platform,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQuery } from "@tanstack/react-query";
+import { useSocket } from "@/lib/socket";
+import { queryClient } from "@/lib/query-client";
 
-interface Chat {
-  id: number;
-  name: string;
-  photoUrl: string;
-  lastMessage: string;
-  timestamp: string;
-  unread?: boolean;
+interface ConversationItem {
+  id: string;
+  matchId: string;
+  partner: {
+    userId: string;
+    displayName: string;
+    photoUrl: string | null;
+  } | null;
+  lastMessage: {
+    content: string;
+    senderId: string;
+    createdAt: string;
+  } | null;
+  unreadCount: number;
+  lastMessageAt: string | null;
+  createdAt: string;
 }
 
-const MOCK_CHATS: Chat[] = [
-  {
-    id: 1,
-    name: "Lena",
-    photoUrl:
-      "https://images.unsplash.com/photo-1762522921456-cdfe882d36c3?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx5b3VuZyUyMHByb2Zlc3Npb25hbCUyMHdvbWFuJTIwcG9ydHJhaXQlMjBzbWlsaW5nfGVufDF8fHx8MTc3MjQ1NzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080",
-    lastMessage: "Perfect timing actually \u2013 I'm free this Thursday",
-    timestamp: "10:30 AM",
-    unread: true,
-  },
-  {
-    id: 2,
-    name: "Marcus",
-    photoUrl:
-      "https://images.unsplash.com/photo-1764084051711-45a3b7c84c06?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBtYW4lMjBjYXN1YWwlMjBwb3J0cmFpdCUyMGhhcHB5fGVufDF8fHx8MTc3MjQ1NzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080",
-    lastMessage: "That coffee ritual sounds amazing",
-    timestamp: "Yesterday",
-    unread: false,
-  },
-  {
-    id: 3,
-    name: "Sofia",
-    photoUrl:
-      "https://images.unsplash.com/photo-1758599543120-4e462429a4d7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx3b21hbiUyMHByb2Zlc3Npb25hbCUyMHBvcnRyYWl0JTIwb3V0ZG9vcnxlbnwxfHx8fDE3NzI0NTc0Nzh8MA&ixlib=rb-4.1.0&q=80&w=1080",
-    lastMessage: "Would love to hear more about your side project!",
-    timestamp: "Yesterday",
-    unread: false,
-  },
-  {
-    id: 4,
-    name: "James",
-    photoUrl:
-      "https://images.unsplash.com/photo-1762708550141-2688121b9ebd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx5b3VuZyUyMG1hbiUyMGNyZWF0aXZlJTIwcHJvZmVzc2lvbmFsJTIwcG9ydHJhaXR8ZW58MXx8fHwxNzcyNDU3NDc4fDA&ixlib=rb-4.1.0&q=80&w=1080",
-    lastMessage: "The Picturehouse always has great picks",
-    timestamp: "1 Mar",
-    unread: false,
-  },
-  {
-    id: 5,
-    name: "Aisha",
-    photoUrl:
-      "https://images.unsplash.com/photo-1771430905474-11adef6fe314?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB3b21hbiUyMHBvcnRyYWl0JTIwbGlmZXN0eWxlfGVufDF8fHx8MTc3MjQ1NzQ3OHww&ixlib=rb-4.1.0&q=80&w=1080",
-    lastMessage: "Your dinner party sounds lovely",
-    timestamp: "28 Feb",
-    unread: false,
-  },
-];
+function formatTimestamp(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-function ChatRow({ chat, onPress }: { chat: Chat; onPress: () => void }) {
+  if (diffDays === 0) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } else if (diffDays === 1) {
+    return "Yesterday";
+  } else if (diffDays < 7) {
+    return date.toLocaleDateString([], { weekday: "short" });
+  } else {
+    return date.toLocaleDateString([], { day: "numeric", month: "short" });
+  }
+}
+
+function ChatRow({
+  conversation,
+  onPress,
+}: {
+  conversation: ConversationItem;
+  onPress: () => void;
+}) {
+  const hasUnread = conversation.unreadCount > 0;
+  const partner = conversation.partner;
+  const lastMessage = conversation.lastMessage;
+
   return (
     <TouchableOpacity
       style={styles.chatRow}
       onPress={onPress}
       activeOpacity={0.6}
-      testID={`chat-${chat.name}`}
+      testID={`chat-${partner?.displayName}`}
     >
-      <Image source={{ uri: chat.photoUrl }} style={styles.avatar} />
+      {partner?.photoUrl ? (
+        <Image source={{ uri: partner.photoUrl }} style={styles.avatar} />
+      ) : (
+        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+          <Text style={styles.avatarPlaceholderText}>
+            {partner?.displayName?.charAt(0) || "?"}
+          </Text>
+        </View>
+      )}
       <View style={styles.chatContent}>
         <View style={styles.chatTopRow}>
           <Text
-            style={[styles.chatName, chat.unread && styles.chatNameUnread]}
+            style={[styles.chatName, hasUnread && styles.chatNameUnread]}
             numberOfLines={1}
           >
-            {chat.name}
+            {partner?.displayName || "Unknown"}
           </Text>
           <View style={styles.chatMeta}>
-            {chat.unread && (
+            {hasUnread && (
               <View style={styles.unreadBadge}>
-                <Text style={styles.unreadBadgeText}>1</Text>
+                <Text style={styles.unreadBadgeText}>
+                  {conversation.unreadCount > 99
+                    ? "99+"
+                    : conversation.unreadCount}
+                </Text>
               </View>
             )}
-            <Text
-              style={[
-                styles.chatTimestamp,
-                chat.unread && styles.chatTimestampUnread,
-              ]}
-            >
-              {chat.timestamp}
-            </Text>
+            {lastMessage && (
+              <Text
+                style={[
+                  styles.chatTimestamp,
+                  hasUnread && styles.chatTimestampUnread,
+                ]}
+              >
+                {formatTimestamp(lastMessage.createdAt)}
+              </Text>
+            )}
           </View>
         </View>
         <Text
           style={[
             styles.chatMessage,
-            chat.unread && styles.chatMessageUnread,
+            hasUnread && styles.chatMessageUnread,
           ]}
           numberOfLines={1}
         >
-          {chat.lastMessage}
+          {lastMessage?.content || "No messages yet"}
         </Text>
       </View>
     </TouchableOpacity>
@@ -118,10 +126,37 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
+  const socket = useSocket();
 
-  const handleChatSelect = (chatId: number) => {
-    router.push(`/chat/${chatId}`);
-  };
+  const {
+    data: conversations,
+    isLoading,
+    refetch,
+    isRefetching,
+  } = useQuery<ConversationItem[]>({
+    queryKey: ["/api/mobile/conversations"],
+  });
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleConversationUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mobile/conversations"] });
+    };
+
+    socket.on("conversation_updated", handleConversationUpdated);
+
+    return () => {
+      socket.off("conversation_updated", handleConversationUpdated);
+    };
+  }, [socket]);
+
+  const handleChatSelect = useCallback(
+    (conversationId: string) => {
+      router.push(`/chat/${conversationId}`);
+    },
+    [router]
+  );
 
   return (
     <View
@@ -130,16 +165,35 @@ export default function ChatScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Chat</Text>
       </View>
-      <FlatList
-        data={MOCK_CHATS}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }) => (
-          <ChatRow chat={item} onPress={() => handleChatSelect(item.id)} />
-        )}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        contentContainerStyle={{ paddingBottom: 100 }}
-        scrollEnabled={MOCK_CHATS.length > 0}
-      />
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="small" color="#737373" />
+        </View>
+      ) : !conversations || conversations.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyTitle}>No conversations yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Start a conversation from your introductions
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={conversations}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <ChatRow
+              conversation={item}
+              onPress={() => handleChatSelect(item.id)}
+            />
+          )}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          contentContainerStyle={{ paddingBottom: 100 }}
+          scrollEnabled={conversations.length > 0}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+          }
+        />
+      )}
     </View>
   );
 }
@@ -160,6 +214,29 @@ const styles = StyleSheet.create({
     fontSize: 28,
     color: "#171717",
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 18,
+    color: "#171717",
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#737373",
+    textAlign: "center",
+  },
   chatRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -172,6 +249,16 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     backgroundColor: "#e5e5e5",
+  },
+  avatarPlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#d4d4d4",
+  },
+  avatarPlaceholderText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 18,
+    color: "#ffffff",
   },
   chatContent: {
     flex: 1,

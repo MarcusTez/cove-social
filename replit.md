@@ -8,6 +8,7 @@ A mobile application built with Expo (React Native) and Express backend. A socia
 - **Backend**: Express server (TypeScript) on port 5000
 - **External API**: Cove API at `EXPO_PUBLIC_COVE_API_URL` for auth, profiles, matches, etc.
 - **Database**: PostgreSQL with Drizzle ORM
+- **Real-time**: Socket.IO for live messaging (attached to Express HTTP server)
 - **State**: React Query (@tanstack/react-query) for server state
 - **Auth**: JWT-based auth with access tokens (in-memory) and refresh tokens (expo-secure-store / AsyncStorage on web)
 - **Fonts**: Playfair Display (serif branding/titles), Inter (sans-serif body/UI)
@@ -26,13 +27,13 @@ app/
   (tabs)/
     _layout.tsx         # Tab navigation layout (Home, Chat, Events, My Profile)
     index.tsx           # Home tab - introductions screen
-    chat.tsx            # Chat tab - conversation list
+    chat.tsx            # Chat tab - conversation list (API-connected)
     events.tsx          # Events tab - placeholder
     profile.tsx         # My Profile tab - API-connected editable profile
   chat/
-    [id].tsx            # Chat thread (full screen, no tab bar)
+    [id].tsx            # Chat thread (full screen, real-time messaging via Socket.IO)
   profile/
-    [matchId].tsx       # Public profile screen (match partner detail view)
+    [matchId].tsx       # Public profile screen (match partner detail view, message CTA creates conversation)
 components/
   CoveSplash.tsx        # Animated splash screen
   ProfileCard.tsx       # Profile introduction card component
@@ -45,13 +46,17 @@ components/
 constants/
   colors.ts             # Color definitions
 lib/
-  auth.tsx              # AuthContext provider, useAuth hook, token management
+  auth.tsx              # AuthContext provider, useAuth hook, token management, socket connect/disconnect
   query-client.ts       # React Query client config, apiRequest, auth header injection
+  socket.ts             # Socket.IO client, useSocket hook, generateClientMessageId
 server/
   index.ts              # Express server entry
-  routes.ts             # API routes
+  routes.ts             # API routes (Cove proxy + chat endpoints + Socket.IO setup)
+  db.ts                 # Drizzle ORM database connection
+  chat.ts               # Chat REST API handlers (conversations, messages, read receipts)
+  socket.ts             # Socket.IO event handlers (real-time messaging, typing indicators)
 shared/
-  schema.ts             # Drizzle database schemas
+  schema.ts             # Drizzle database schemas (users, conversations, conversation_participants, messages)
 ```
 
 ## Authentication Flow
@@ -62,12 +67,43 @@ shared/
 4. Access token stored in memory (`lib/query-client.ts` module variable), refresh token stored in expo-secure-store (native) or AsyncStorage (web)
 5. All API requests automatically include `Authorization: Bearer <token>` header via `getAuthHeaders()` in query-client
 6. Navigation guard in `_layout.tsx` redirects unauthenticated users to login and authenticated users to tabs
-7. Logout calls `POST /auth/logout`, clears all tokens, and resets user state
+7. On login/refresh, Socket.IO client connects with the access token for real-time messaging
+8. Logout calls `POST /auth/logout`, disconnects socket, clears all tokens, and resets user state
+
+## Chat Feature (Real-time Messaging)
+
+### Database Schema
+- **conversations**: id, matchId, lastMessageAt, createdAt, updatedAt
+- **conversation_participants** (join table): conversationId + userId (composite PK), displayName, photoUrl, lastReadAt
+- **messages**: id, conversationId, senderId, clientMessageId (unique per conversation for idempotency), content, createdAt
+
+### REST API Endpoints
+- `GET /api/mobile/conversations` — list user's conversations with partner info, last message, unread count (sorted by lastMessageAt)
+- `POST /api/mobile/conversations` — create or get existing conversation for a match
+- `GET /api/mobile/conversations/:id/messages?cursor=<iso>&limit=30` — cursor-paginated message history
+- `POST /api/mobile/conversations/:id/messages` — send message with clientMessageId idempotency
+- `PATCH /api/mobile/conversations/:id/read` — update lastReadAt for the current user
+
+### Socket.IO Events
+- **Room strategy**: personal `user:{userId}` room on connect; `conversation:{id}` rooms joined/left on screen open/close
+- **send_message**: client sends {conversationId, content, clientMessageId}, server persists + broadcasts
+- **message:ack**: server confirms message saved with server-assigned id + timestamp
+- **new_message**: broadcast to conversation room participants
+- **conversation_updated**: sent to partner's user room for list refresh
+- **typing / stop_typing**: broadcast to conversation room (no persistence)
+- **mark_read**: updates lastReadAt on participant row
+
+### Frontend Flow
+- Chat list fetches via React Query, updates in real-time via `conversation_updated` socket event
+- Chat thread uses infinite query with cursor pagination, optimistic message sending via socket
+- Conversations created from match profile "Message" CTA via `POST /api/mobile/conversations`
+- Unread count = messages where createdAt > participant.lastReadAt AND senderId != me
 
 ## Environment Variables
 
 - `EXPO_PUBLIC_COVE_API_URL`: Base URL for the Cove API (dev: `https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile`)
 - `EXPO_PUBLIC_DOMAIN`: Auto-set by Replit for the Express backend URL
+- `DATABASE_URL`: PostgreSQL connection string (auto-set by Replit)
 
 ## App Flow
 
@@ -76,18 +112,9 @@ shared/
 3. Login screen (connected to Cove API) or main app
 4. Main app with 4-tab navigation:
    - **Home**: Weekly introductions fetched from `GET /api/mobile/matches` via React Query; displays profile cards with partner data (photos, overlap tags, activities, prompts, rituals) or empty "being prepared" state; pull-to-refresh supported; "View profile" navigates to public profile screen
-   - **Chat**: Conversation list with unread badges → chat thread with message bubbles
+   - **Chat**: Real-time conversation list with unread badges → chat thread with live messaging
    - **Events**: Events listing (placeholder, awaiting backend)
    - **My Profile**: API-connected profile with editable sections; fetches from `GET /profile`, saves via `PATCH /profile`, prompts via CRUD endpoints
-
-## Chat Feature
-
-- Chat list shows conversations with avatars, last message, timestamps, unread badges
-- Chat thread displays messages as bubbles (dark = sent, light = received) with inverted FlatList
-- 3-dot menu in thread header provides: View intro profile, Block user, Report user
-- Block modal with cancel/confirm actions
-- Message composer with text input and send button
-- Currently uses mock data; messaging mechanism to be built later
 
 ## Design System
 

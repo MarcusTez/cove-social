@@ -1,5 +1,13 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "node:http";
+import {
+  getConversations,
+  getMessages,
+  createConversation,
+  sendMessage,
+  markConversationRead,
+} from "./chat";
+import { setupSocketIO } from "./socket";
 
 const COVE_API_BASE = process.env.EXPO_PUBLIC_COVE_API_URL || "https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile";
 
@@ -68,7 +76,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/mobile/matching-preferences", proxyToCove);
   app.get("/api/mobile/subscription", proxyToCove);
 
+  app.get("/api/mobile/conversations", getConversations);
+  app.post("/api/mobile/conversations", createConversation);
+  app.get("/api/mobile/conversations/:id/messages", getMessages);
+  app.post("/api/mobile/conversations/:id/messages", sendMessage);
+  app.patch("/api/mobile/conversations/:id/read", markConversationRead);
+
   const httpServer = createServer(app);
+
+  const allowedOrigins = new Set<string>();
+  if (process.env.REPLIT_DEV_DOMAIN) {
+    allowedOrigins.add(`https://${process.env.REPLIT_DEV_DOMAIN}`);
+  }
+  if (process.env.REPLIT_DOMAINS) {
+    process.env.REPLIT_DOMAINS.split(",").forEach((d) => {
+      allowedOrigins.add(`https://${d.trim()}`);
+    });
+  }
+
+  setupSocketIO(httpServer, allowedOrigins);
 
   return httpServer;
 }

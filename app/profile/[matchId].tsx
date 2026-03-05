@@ -9,11 +9,14 @@ import {
   Platform,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Ionicons } from "@expo/vector-icons";
+import { apiRequest, queryClient } from "@/lib/query-client";
+import { useAuth } from "@/lib/auth";
 
 interface MatchPhoto {
   id: string;
@@ -69,6 +72,7 @@ export default function PublicProfileScreen() {
   const insets = useSafeAreaInsets();
   const { matchId } = useLocalSearchParams<{ matchId: string }>();
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const { user } = useAuth();
 
   const { data: match, isLoading, isError } = useQuery<MatchDetail>({
     queryKey: ["/api/mobile/matches", matchId],
@@ -83,6 +87,29 @@ export default function PublicProfileScreen() {
     ? [...partner.prompts].sort((a, b) => a.displayOrder - b.displayOrder)
     : [];
 
+  const createConversationMutation = useMutation({
+    mutationFn: async () => {
+      if (!partner || !matchId) throw new Error("Missing data");
+      const firstPhoto = photos[0]?.photoData || null;
+      const res = await apiRequest("POST", "/api/mobile/conversations", {
+        matchId,
+        partnerId: partner.id,
+        partnerName: partner.firstName,
+        partnerPhotoUrl: firstPhoto,
+        userName: user?.firstName || "You",
+        userPhotoUrl: null,
+      });
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mobile/conversations"] });
+      router.replace(`/chat/${data.id}`);
+    },
+    onError: () => {
+      Alert.alert("Error", "Could not start conversation. Please try again.");
+    },
+  });
+
   const handlePhotoTap = (locationX: number) => {
     if (photos.length <= 1) return;
     if (locationX < SCREEN_WIDTH / 2) {
@@ -93,8 +120,8 @@ export default function PublicProfileScreen() {
   };
 
   const handleMessage = () => {
-    if (partner?.id) {
-      router.replace(`/chat/${partner.id}`);
+    if (partner?.id && matchId) {
+      createConversationMutation.mutate();
     } else {
       router.back();
     }
@@ -245,12 +272,15 @@ export default function PublicProfileScreen() {
         ]}
       >
         <TouchableOpacity
-          style={styles.ctaButton}
+          style={[styles.ctaButton, createConversationMutation.isPending && { opacity: 0.6 }]}
           onPress={handleMessage}
           activeOpacity={0.8}
+          disabled={createConversationMutation.isPending}
           testID="profile-message"
         >
-          <Text style={styles.ctaButtonText}>Message {partner.firstName}</Text>
+          <Text style={styles.ctaButtonText}>
+            {createConversationMutation.isPending ? "Opening chat..." : `Message ${partner.firstName}`}
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
