@@ -48,15 +48,21 @@ function SettingsRow({
 }
 
 type DeleteStep = "none" | "warning" | "confirm";
+type FormView = "none" | "contact" | "safety";
 
 export function SettingsScreen({ visible, onClose, subscriptionStatus }: SettingsScreenProps) {
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const [deleteStep, setDeleteStep] = useState<DeleteStep>("none");
   const [confirmText, setConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [formView, setFormView] = useState<FormView>("none");
+  const [formEmail, setFormEmail] = useState("");
+  const [formSubject, setFormSubject] = useState("");
+  const [formMessage, setFormMessage] = useState("");
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
 
   const handleLogout = () => {
     Alert.alert("Log out", "Are you sure you want to log out?", [
@@ -90,11 +96,144 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
     await logout();
   };
 
+  const openForm = (type: FormView) => {
+    setFormEmail(user?.email || "");
+    setFormSubject("");
+    setFormMessage("");
+    setFormView(type);
+  };
+
+  const closeForm = () => {
+    setFormView("none");
+    setFormEmail("");
+    setFormSubject("");
+    setFormMessage("");
+  };
+
+  const handleSubmitForm = async () => {
+    if (!formEmail.trim() || !formSubject.trim() || !formMessage.trim()) {
+      Alert.alert("Missing fields", "Please fill in all fields before submitting.");
+      return;
+    }
+    setIsSubmittingForm(true);
+    try {
+      const recipient = formView === "safety" ? "safety@cove-social.com" : "support@cove-social.com";
+      const mailtoUrl = `mailto:${recipient}?subject=${encodeURIComponent(formSubject.trim())}&body=${encodeURIComponent(formMessage.trim() + "\n\nFrom: " + formEmail.trim())}`;
+      await Linking.openURL(mailtoUrl);
+      Alert.alert(
+        formView === "safety" ? "Report submitted" : "Message sent",
+        formView === "safety"
+          ? "Thank you for your report. Our team will review this promptly."
+          : "Thank you for reaching out. We'll get back to you soon.",
+      );
+      closeForm();
+    } catch {
+      Alert.alert("Error", "Something went wrong. Please try again.");
+    } finally {
+      setIsSubmittingForm(false);
+    }
+  };
+
   const handleClose = () => {
     setDeleteStep("none");
     setConfirmText("");
+    setFormView("none");
     onClose();
   };
+
+  if (formView !== "none") {
+    const isSafety = formView === "safety";
+    return (
+      <Modal visible={visible} animationType="slide" onRequestClose={closeForm}>
+        <View
+          style={[
+            styles.container,
+            {
+              paddingTop: insets.top + webTopInset,
+              paddingBottom: Math.max(insets.bottom, webBottomInset) + 12,
+            },
+          ]}
+        >
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>
+              {isSafety ? "Report a Safety Issue" : "Contact Support"}
+            </Text>
+            <TouchableOpacity onPress={closeForm} style={styles.closeButton} activeOpacity={0.7}>
+              <Ionicons name="close" size={22} color="#171717" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.formContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {isSafety && (
+              <Text style={styles.formDescription}>
+                Your safety is our priority. Please share details about any concerning behavior or violations of our community guidelines.
+              </Text>
+            )}
+
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Email</Text>
+              <TextInput
+                style={styles.formInput}
+                value={formEmail}
+                onChangeText={setFormEmail}
+                placeholder="your@email.com"
+                placeholderTextColor="#a3a3a3"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Subject</Text>
+              <TextInput
+                style={styles.formInput}
+                value={formSubject}
+                onChangeText={setFormSubject}
+                placeholder={isSafety ? "Brief description of the issue" : "How can we help?"}
+                placeholderTextColor="#a3a3a3"
+              />
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>{isSafety ? "Details" : "Message"}</Text>
+              <TextInput
+                style={styles.formTextArea}
+                value={formMessage}
+                onChangeText={setFormMessage}
+                placeholder={isSafety ? "Please provide as much detail as possible..." : "Tell us more about your issue..."}
+                placeholderTextColor="#a3a3a3"
+                multiline
+                textAlignVertical="top"
+              />
+            </View>
+          </ScrollView>
+
+          <View style={styles.formActions}>
+            <TouchableOpacity
+              style={styles.formSubmitButton}
+              onPress={handleSubmitForm}
+              activeOpacity={0.8}
+              disabled={isSubmittingForm}
+            >
+              {isSubmittingForm ? (
+                <ActivityIndicator color="#fafafa" />
+              ) : (
+                <Text style={styles.formSubmitText}>
+                  {isSafety ? "Submit report" : "Send message"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
 
   if (deleteStep === "warning") {
     return (
@@ -257,14 +396,10 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
           <SettingsRow label="Community guidelines" onPress={() => {}} />
           <View style={styles.divider} />
 
-          <SettingsRow label="Contact support" onPress={() => {
-            Linking.openURL("mailto:support@cove-social.com");
-          }} />
+          <SettingsRow label="Contact support" onPress={() => openForm("contact")} />
           <View style={styles.divider} />
 
-          <SettingsRow label="Report a safety issue" onPress={() => {
-            Linking.openURL("mailto:safety@cove-social.com?subject=Safety%20Issue%20Report");
-          }} />
+          <SettingsRow label="Report a safety issue" onPress={() => openForm("safety")} />
           <View style={styles.divider} />
 
           <View style={styles.sectionSpacer} />
@@ -387,6 +522,65 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 12,
     marginBottom: 20,
+  },
+  formContent: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 40,
+  },
+  formDescription: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    color: "#737373",
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  formField: {
+    marginBottom: 24,
+  },
+  formLabel: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#737373",
+    marginBottom: 8,
+  },
+  formInput: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 16,
+    color: "#171717",
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: "#ffffff",
+  },
+  formTextArea: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 16,
+    color: "#171717",
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: "#ffffff",
+    minHeight: 180,
+  },
+  formActions: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  formSubmitButton: {
+    backgroundColor: "#171717",
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: "center" as const,
+  },
+  formSubmitText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 16,
+    color: "#fafafa",
   },
   deleteContent: {
     paddingHorizontal: 20,
