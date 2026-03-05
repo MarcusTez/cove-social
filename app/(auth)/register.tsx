@@ -13,6 +13,7 @@ import {
   Modal,
   FlatList,
   Pressable,
+  Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -215,8 +216,23 @@ export default function RegisterScreen() {
 
             <Text style={styles.termsText}>
               By joining, you agree to our{" "}
-              <Text style={styles.termsLink}>Terms of Service</Text> and{" "}
-              <Text style={styles.termsLink}>Privacy Policy</Text>
+              <Text
+                style={styles.termsLink}
+                onPress={() => Linking.openURL("https://cove-social.com/terms").catch(() => {})}
+                accessibilityRole="link"
+                testID="terms-link"
+              >
+                Terms of Service
+              </Text>{" "}
+              and{" "}
+              <Text
+                style={styles.termsLink}
+                onPress={() => Linking.openURL("https://cove-social.com/privacy").catch(() => {})}
+                accessibilityRole="link"
+                testID="privacy-link"
+              >
+                Privacy Policy
+              </Text>
             </Text>
 
             <View style={styles.switchRow}>
