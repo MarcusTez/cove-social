@@ -352,6 +352,38 @@ export async function sendMessage(req: Request, res: Response) {
   }
 }
 
+export async function deleteConversation(req: Request, res: Response) {
+  const userId = await validateTokenAndGetUserId(req.headers.authorization);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const { id } = req.params;
+
+  try {
+    const [participant] = await db
+      .select()
+      .from(conversationParticipants)
+      .where(
+        and(
+          eq(conversationParticipants.conversationId, id),
+          eq(conversationParticipants.userId, userId)
+        )
+      );
+
+    if (!participant) {
+      return res.status(403).json({ error: "Not a participant in this conversation" });
+    }
+
+    await db.delete(messages).where(eq(messages.conversationId, id));
+    await db.delete(conversationParticipants).where(eq(conversationParticipants.conversationId, id));
+    await db.delete(conversations).where(eq(conversations.id, id));
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting conversation:", error);
+    res.status(500).json({ error: "Failed to delete conversation" });
+  }
+}
+
 export async function markConversationRead(req: Request, res: Response) {
   const userId = await validateTokenAndGetUserId(req.headers.authorization);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });

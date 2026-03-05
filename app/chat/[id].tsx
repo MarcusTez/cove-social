@@ -11,6 +11,7 @@ import {
   Pressable,
   Alert,
   ActivityIndicator,
+  Modal,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -106,6 +107,8 @@ export default function ChatThreadScreen() {
   const [messageText, setMessageText] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [localMessages, setLocalMessages] = useState<MessageItem[]>([]);
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -294,6 +297,22 @@ export default function ChatThreadScreen() {
     }
   };
 
+  const handleDeleteConversation = async () => {
+    if (!id || isDeleting) return;
+    setIsDeleting(true);
+    try {
+      await apiRequest("DELETE", `/api/mobile/conversations/${id}`);
+      queryClient.invalidateQueries({
+        queryKey: ["/api/mobile/conversations"],
+      });
+      setShowDeleteModal(false);
+      router.back();
+    } catch {
+      Alert.alert("Error", "Failed to delete conversation. Please try again.");
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
@@ -378,8 +397,21 @@ export default function ChatThreadScreen() {
                     activeOpacity={0.6}
                     testID="menu-report"
                   >
-                    <Text style={styles.dropdownItemTextDestructive}>
+                    <Text style={styles.dropdownItemText}>
                       Report user
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setShowMenu(false);
+                      setShowDeleteModal(true);
+                    }}
+                    activeOpacity={0.6}
+                    testID="menu-delete-conversation"
+                  >
+                    <Text style={styles.dropdownItemTextDestructive}>
+                      Delete conversation
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -475,6 +507,49 @@ export default function ChatThreadScreen() {
         onClose={() => setShowBlockModal(false)}
         onConfirm={handleBlock}
       />
+
+      <Modal
+        visible={showDeleteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <Pressable
+          style={styles.deleteModalOverlay}
+          onPress={() => setShowDeleteModal(false)}
+        >
+          <Pressable style={styles.deleteModalContent} onPress={() => {}}>
+            <Text style={styles.deleteModalTitle}>Delete conversation?</Text>
+            <Text style={styles.deleteModalDescription}>
+              Your conversation with {contact?.displayName || "this user"} will
+              be permanently deleted. This action cannot be undone.
+            </Text>
+            <View style={styles.deleteModalButtons}>
+              <TouchableOpacity
+                style={styles.deleteModalCancelButton}
+                onPress={() => setShowDeleteModal(false)}
+                activeOpacity={0.7}
+                testID="delete-cancel"
+              >
+                <Text style={styles.deleteModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteModalDeleteButton}
+                onPress={handleDeleteConversation}
+                activeOpacity={0.7}
+                disabled={isDeleting}
+                testID="delete-confirm"
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.deleteModalDeleteText}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -664,5 +739,62 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     opacity: 0.4,
+  },
+  deleteModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 32,
+  },
+  deleteModalContent: {
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    padding: 24,
+    width: "100%",
+    maxWidth: 340,
+  },
+  deleteModalTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 18,
+    color: "#171717",
+    marginBottom: 10,
+  },
+  deleteModalDescription: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#525252",
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  deleteModalButtons: {
+    flexDirection: "row" as const,
+    gap: 12,
+  },
+  deleteModalCancelButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#f5f5f5",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  deleteModalCancelText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: "#171717",
+  },
+  deleteModalDeleteButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#dc2626",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  deleteModalDeleteText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 15,
+    color: "#ffffff",
   },
 });

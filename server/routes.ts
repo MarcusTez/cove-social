@@ -6,6 +6,7 @@ import {
   createConversation,
   sendMessage,
   markConversationRead,
+  deleteConversation,
 } from "./chat";
 import { setupSocketIO } from "./socket";
 
@@ -81,6 +82,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/mobile/conversations/:id/messages", getMessages);
   app.post("/api/mobile/conversations/:id/messages", sendMessage);
   app.patch("/api/mobile/conversations/:id/read", markConversationRead);
+  app.delete("/api/mobile/conversations/:id", deleteConversation);
 
   const httpServer = createServer(app);
 
