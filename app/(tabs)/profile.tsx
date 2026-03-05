@@ -383,20 +383,17 @@ const FRIENDSHIP_MATTERS_OPTIONS = [
 ];
 
 const PROMPT_OPTIONS = [
-  "This week I'm probably\u2026",
-  "Favourite song right now",
-  "A small ritual I care about\u2026",
+  "This week I'm probably",
+  "A small ritual I care about",
+  "A documentary / book / film / series I can't stop recommending",
+  "A song I've played far too much recently",
+  "The latest show I binged",
+  "What I'm pondering at the moment",
+  "A film or book I loved",
+  "Favourite song or artist right now",
+  "The last show that I went to",
+  "The next trip I'm planning",
   "Best meal I've had recently",
-  "Last thing that made me laugh",
-  "A place that feels like home",
-  "Something I'm learning",
-  "My ideal Sunday looks like\u2026",
-  "A non-negotiable for me",
-  "Something I'm looking forward to",
-  "My go-to coffee order",
-  "A hidden talent",
-  "Something that surprised me lately",
-  "My current obsession",
 ];
 
 type EditingSection = {
