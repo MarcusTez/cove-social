@@ -15,6 +15,15 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState, useCallback } from "react";
+import { View, StyleSheet } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
+  Easing,
+} from "react-native-reanimated";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -23,6 +32,56 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 import { CoveSplash } from "@/components/CoveSplash";
 
 SplashScreen.preventAutoHideAsync();
+
+function AuthLoadingScreen() {
+  const lineTranslateX = useSharedValue(-1);
+
+  useEffect(() => {
+    lineTranslateX.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.cubic) }),
+        withTiming(-1, { duration: 1200, easing: Easing.inOut(Easing.cubic) })
+      ),
+      -1,
+      false
+    );
+  }, []);
+
+  const lineStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: lineTranslateX.value * 60 }],
+  }));
+
+  return (
+    <View style={loadingStyles.container}>
+      <View style={loadingStyles.lineTrack}>
+        <Animated.View style={[loadingStyles.lineIndicator, lineStyle]} />
+      </View>
+    </View>
+  );
+}
+
+const loadingStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#faf9f7",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  lineTrack: {
+    width: 120,
+    height: 1.5,
+    backgroundColor: "#e5e5e5",
+    borderRadius: 1,
+    overflow: "hidden",
+  },
+  lineIndicator: {
+    width: 40,
+    height: 1.5,
+    backgroundColor: "#1a1a1a",
+    borderRadius: 1,
+    alignSelf: "center",
+  },
+});
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -40,6 +99,10 @@ function RootLayoutNav() {
       router.replace("/(tabs)");
     }
   }, [isAuthenticated, isLoading, segments]);
+
+  if (isLoading) {
+    return <AuthLoadingScreen />;
+  }
 
   return (
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
