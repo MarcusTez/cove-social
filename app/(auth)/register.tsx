@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#F9F9F7",
   },
   pickerButton: {
     flexDirection: "row",
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#F9F9F7",
   },
   pickerText: {
     fontFamily: "Inter_400Regular",
