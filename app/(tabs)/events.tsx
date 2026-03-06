@@ -17,12 +17,10 @@ export default function EventsScreen() {
         <View style={styles.textContainer}>
           <Text style={styles.heading}>Events are coming soon</Text>
           <Text style={styles.body}>
-            We're curating a selection of gallery openings, film nights, talks,
-            dinners, and cultural moments happening across the city.
+            We're curating a selection of interesting things happening across the city.
           </Text>
           <Text style={styles.body}>
-            Soon you'll be able to discover interesting things to do and find
-            people from Cove to go with.
+            Soon you'll be able to discover what's going on and find people from Cove to experience it with.
           </Text>
         </View>
       </View>
