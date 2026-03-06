@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { db } from "./db";
 import { conversations, conversationParticipants, messages } from "../shared/schema";
-import { eq, and, desc, lt, ne, gt, sql, count } from "drizzle-orm";
+import { eq, and, desc, lt, ne, sql } from "drizzle-orm";
 
 const userIdCache = new Map<string, { userId: string; expiresAt: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -113,36 +113,41 @@ export async function getConversations(req: Request, res: Response) {
 
     const partnerMap = new Map(allPartners.map((p) => [p.conversationId, p]));
 
-    const lastMessages = await Promise.all(
-      conversationIds.map(async (convId) => {
-        const [msg] = await db
-          .select()
-          .from(messages)
-          .where(eq(messages.conversationId, convId))
-          .orderBy(desc(messages.createdAt))
-          .limit(1);
-        return { convId, msg: msg || null };
-      })
-    );
-    const lastMsgMap = new Map(lastMessages.map((lm) => [lm.convId, lm.msg]));
+    const lastMsgRows = await db.execute(sql`
+      SELECT DISTINCT ON (conversation_id)
+        id, conversation_id, sender_id, client_message_id, content, created_at
+      FROM messages
+      WHERE conversation_id IN (${sql.join(conversationIds.map(id => sql`${id}`), sql`, `)})
+      ORDER BY conversation_id, created_at DESC
+    `);
+    const lastMsgMap = new Map<string, { id: string; conversationId: string; senderId: string; clientMessageId: string; content: string; createdAt: Date }>();
+    for (const row of lastMsgRows.rows) {
+      const r = row as any;
+      lastMsgMap.set(r.conversation_id, {
+        id: r.id,
+        conversationId: r.conversation_id,
+        senderId: r.sender_id,
+        clientMessageId: r.client_message_id,
+        content: r.content,
+        createdAt: new Date(r.created_at),
+      });
+    }
 
-    const unreadCounts = await Promise.all(
-      convRows.map(async (row) => {
-        const conditions = [
-          eq(messages.conversationId, row.convId),
-          ne(messages.senderId, userId),
-        ];
-        if (row.myLastReadAt) {
-          conditions.push(gt(messages.createdAt, row.myLastReadAt));
-        }
-        const [result] = await db
-          .select({ count: count() })
-          .from(messages)
-          .where(and(...conditions));
-        return { convId: row.convId, count: result?.count ?? 0 };
-      })
-    );
-    const unreadMap = new Map(unreadCounts.map((u) => [u.convId, u.count]));
+    const unreadRows = await db.execute(sql`
+      SELECT m.conversation_id, COUNT(*)::int AS unread_count
+      FROM messages m
+      INNER JOIN conversation_participants cp
+        ON cp.conversation_id = m.conversation_id AND cp.user_id = ${userId}
+      WHERE m.conversation_id IN (${sql.join(conversationIds.map(id => sql`${id}`), sql`, `)})
+        AND m.sender_id != ${userId}
+        AND (cp.last_read_at IS NULL OR m.created_at > cp.last_read_at)
+      GROUP BY m.conversation_id
+    `);
+    const unreadMap = new Map<string, number>();
+    for (const row of unreadRows.rows) {
+      const r = row as any;
+      unreadMap.set(r.conversation_id, r.unread_count);
+    }
 
     const partnersNeedingPhotos = allPartners.filter(
       (p) => !p.photoUrl

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, primaryKey, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, primaryKey, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -63,6 +63,10 @@ export const messages = pgTable(
     uniqueIndex("messages_conversation_client_msg_idx").on(
       table.conversationId,
       table.clientMessageId
+    ),
+    index("messages_conversation_created_at_idx").on(
+      table.conversationId,
+      table.createdAt
     ),
   ]
 );

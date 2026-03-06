@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, memo, useMemo } from "react";
 import {
   View,
   Text,
@@ -56,7 +56,7 @@ function formatTime(dateStr: string): string {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function MessageBubble({
+const MessageBubble = memo(function MessageBubble({
   message,
   isMe,
 }: {
@@ -96,7 +96,7 @@ function MessageBubble({
       </View>
     </View>
   );
-}
+});
 
 export default function ChatThreadScreen() {
   const router = useRouter();
@@ -144,21 +144,25 @@ export default function ChatThreadScreen() {
     enabled: !!id,
   });
 
-  const serverMessages =
-    messagesData?.pages.flatMap((page) => page.messages) ?? [];
-
-  const allMessages = [...localMessages, ...serverMessages].reduce<
-    MessageItem[]
-  >((acc, msg) => {
-    if (!acc.find((m) => m.clientMessageId === msg.clientMessageId)) {
-      acc.push(msg);
-    }
-    return acc;
-  }, []);
-
-  allMessages.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  const serverMessages = useMemo(
+    () => messagesData?.pages.flatMap((page) => page.messages) ?? [],
+    [messagesData]
   );
+
+  const allMessages = useMemo(() => {
+    const seen = new Map<string, MessageItem>();
+    for (const msg of localMessages) {
+      seen.set(msg.clientMessageId, msg);
+    }
+    for (const msg of serverMessages) {
+      if (!seen.has(msg.clientMessageId)) {
+        seen.set(msg.clientMessageId, msg);
+      }
+    }
+    return Array.from(seen.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [localMessages, serverMessages]);
 
   useEffect(() => {
     if (!socket || !id) return;
@@ -262,6 +266,13 @@ export default function ChatThreadScreen() {
 
     socket.emit("stop_typing", id);
   }, [messageText, socket, id, user]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: MessageItem }) => (
+      <MessageBubble message={item} isMe={item.senderId === user?.id} />
+    ),
+    [user?.id]
+  );
 
   const handleTextChange = useCallback(
     (text: string) => {
@@ -429,12 +440,7 @@ export default function ChatThreadScreen() {
             ref={flatListRef}
             data={allMessages}
             keyExtractor={(item) => item.clientMessageId || item.id}
-            renderItem={({ item }) => (
-              <MessageBubble
-                message={item}
-                isMe={item.senderId === user?.id}
-              />
-            )}
+            renderItem={renderItem}
             contentContainerStyle={styles.messagesList}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
