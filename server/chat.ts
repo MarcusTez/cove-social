@@ -36,6 +36,34 @@ export async function validateTokenAndGetUserId(authHeader: string | undefined):
   }
 }
 
+const partnerPhotoCache = new Map<string, { photoData: string | null; expiresAt: number }>();
+const PHOTO_CACHE_TTL_MS = 15 * 60 * 1000;
+
+async function fetchPartnerPhotosFromMatches(authHeader: string): Promise<Map<string, string>> {
+  const photoMap = new Map<string, string>();
+  try {
+    const res = await fetch(`${COVE_API_BASE}/matches`, {
+      headers: { Authorization: authHeader },
+    });
+    if (!res.ok) return photoMap;
+    const data = await res.json();
+    const matches = data.matches || data || [];
+    for (const match of matches) {
+      const partner = match.partner;
+      if (!partner?.id || !partner.photos?.length) continue;
+      const sorted = [...partner.photos].sort((a: any, b: any) => a.displayOrder - b.displayOrder);
+      const primaryPhoto = sorted[0]?.photoData;
+      if (primaryPhoto) {
+        photoMap.set(partner.id, primaryPhoto);
+        partnerPhotoCache.set(partner.id, { photoData: primaryPhoto, expiresAt: Date.now() + PHOTO_CACHE_TTL_MS });
+      }
+    }
+  } catch (err) {
+    console.error("Error fetching partner photos from matches:", err);
+  }
+  return photoMap;
+}
+
 export function extractUserIdFromTokenUnsafe(authHeader: string | undefined): string | null {
   if (!authHeader?.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7);
@@ -116,9 +144,33 @@ export async function getConversations(req: Request, res: Response) {
     );
     const unreadMap = new Map(unreadCounts.map((u) => [u.convId, u.count]));
 
+    const partnersNeedingPhotos = allPartners.filter(
+      (p) => !p.photoUrl
+    );
+    let matchPhotos = new Map<string, string>();
+    if (partnersNeedingPhotos.length > 0 && req.headers.authorization) {
+      const cachedPhotos = new Map<string, string>();
+      const needsFetch = partnersNeedingPhotos.some((p) => {
+        const cached = partnerPhotoCache.get(p.userId);
+        if (cached && cached.expiresAt > Date.now() && cached.photoData) {
+          cachedPhotos.set(p.userId, cached.photoData);
+          return false;
+        }
+        return true;
+      });
+
+      if (needsFetch) {
+        matchPhotos = await fetchPartnerPhotosFromMatches(req.headers.authorization as string);
+      }
+      for (const [k, v] of cachedPhotos) {
+        if (!matchPhotos.has(k)) matchPhotos.set(k, v);
+      }
+    }
+
     const results = convRows.map((row) => {
       const partner = partnerMap.get(row.convId);
       const lastMsg = lastMsgMap.get(row.convId);
+      const resolvedPhotoUrl = partner?.photoUrl || (partner ? matchPhotos.get(partner.userId) : null) || null;
       return {
         id: row.convId,
         matchId: row.matchId,
@@ -126,7 +178,7 @@ export async function getConversations(req: Request, res: Response) {
           ? {
               userId: partner.userId,
               displayName: partner.displayName,
-              photoUrl: partner.photoUrl,
+              photoUrl: resolvedPhotoUrl,
             }
           : null,
         lastMessage: lastMsg

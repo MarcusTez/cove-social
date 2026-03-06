@@ -78,7 +78,7 @@ shared/
 - **messages**: id, conversationId, senderId, clientMessageId (unique per conversation for idempotency), content, createdAt
 
 ### REST API Endpoints
-- `GET /api/mobile/conversations` — list user's conversations with partner info, last message, unread count (sorted by lastMessageAt)
+- `GET /api/mobile/conversations` — list user's conversations with partner info, last message, unread count (sorted by lastMessageAt). Server enriches missing partner photoUrls by fetching from Cove matches API (with in-memory caching)
 - `POST /api/mobile/conversations` — create or get existing conversation for a match
 - `GET /api/mobile/conversations/:id/messages?cursor=<iso>&limit=30` — cursor-paginated message history
 - `POST /api/mobile/conversations/:id/messages` — send message with clientMessageId idempotency
