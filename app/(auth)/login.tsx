@@ -10,6 +10,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -126,6 +127,14 @@ export default function LoginScreen() {
                 <Text style={styles.switchLink}>Register here</Text>
               </TouchableOpacity>
             </View>
+
+            <TouchableOpacity
+              onPress={() => Linking.openURL("https://www.cove-social.com/reset-password")}
+              style={styles.resetRow}
+              testID="reset-password"
+            >
+              <Text style={styles.switchLink}>Reset password</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -226,5 +235,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#171717",
     textDecorationLine: "underline",
+  },
+  resetRow: {
+    alignItems: "center",
   },
 });
