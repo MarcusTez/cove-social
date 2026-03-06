@@ -100,14 +100,12 @@ function mapApiToDisplay(api: ApiProfile): DisplayProfile {
   const photoSlots: (string | null)[] = [];
   const photoIdSlots: (string | null)[] = [];
   const sorted = [...(api.photos || [])].sort((a, b) => a.displayOrder - b.displayOrder);
-  for (let i = 0; i < 3; i++) {
-    if (sorted[i]) {
-      photoSlots.push(sorted[i].photoData);
-      photoIdSlots.push(sorted[i].id);
-    } else {
-      photoSlots.push(null);
-      photoIdSlots.push(null);
-    }
+  if (sorted[0]) {
+    photoSlots.push(sorted[0].photoData);
+    photoIdSlots.push(sorted[0].id);
+  } else {
+    photoSlots.push(null);
+    photoIdSlots.push(null);
   }
 
   return {
