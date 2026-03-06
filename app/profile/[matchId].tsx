@@ -292,11 +292,11 @@ export default function PublicProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#F9F9F7",
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#F9F9F7",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 20,
     paddingTop: 12,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#F9F9F7",
   },
   ctaButton: {
     backgroundColor: "#171717",

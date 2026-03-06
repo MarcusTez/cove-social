@@ -270,7 +270,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#F9F9F7",
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -311,14 +311,14 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#F9F9F7",
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
   },
   emptyScrollContent: {
     flexGrow: 1,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#F9F9F7",
     paddingHorizontal: 20,
   },
   emptyHeader: {

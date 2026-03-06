@@ -119,7 +119,7 @@ shared/
 
 ## Design System
 
-- Background: #fafafa
+- Background: #F9F9F7
 - Foreground/text: #171717
 - Muted text: #737373
 - Borders: #e5e5e5

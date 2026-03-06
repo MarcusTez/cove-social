@@ -201,7 +201,7 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fafafa",
+    backgroundColor: "#F9F9F7",
   },
   header: {
     paddingHorizontal: 20,
