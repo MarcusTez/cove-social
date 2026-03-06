@@ -64,11 +64,12 @@ shared/
 1. On app launch, AuthProvider checks for a stored refresh token and attempts silent re-authentication via `POST /auth/refresh`
 2. If no valid refresh token, user sees the login screen
 3. Login calls `POST /auth/login` with email + password, receives access token (1hr) + refresh token (30 days) + user object
-4. Access token stored in memory (`lib/query-client.ts` module variable), refresh token stored in expo-secure-store (native) or AsyncStorage (web)
-5. All API requests automatically include `Authorization: Bearer <token>` header via `getAuthHeaders()` in query-client
-6. Navigation guard in `_layout.tsx` redirects unauthenticated users to login and authenticated users to tabs
-7. On login/refresh, Socket.IO client connects with the access token for real-time messaging
-8. Logout calls `POST /auth/logout`, disconnects socket, clears all tokens, and resets user state
+4. **Membership validation**: Before granting access, `validateMembershipStatus()` checks `accountStatus` (must be "active"), `subscriptionStatus` (must be "active" or "trialing"), and `currentPeriodEnd` (must not be expired). Failed checks block login with a descriptive error message, or silently reject session refresh (redirecting to login).
+5. Access token stored in memory (`lib/query-client.ts` module variable), refresh token stored in expo-secure-store (native) or AsyncStorage (web)
+6. All API requests automatically include `Authorization: Bearer <token>` header via `getAuthHeaders()` in query-client
+7. Navigation guard in `_layout.tsx` redirects unauthenticated users to login and authenticated users to tabs
+8. On login/refresh, Socket.IO client connects with the access token for real-time messaging
+9. Logout calls `POST /auth/logout`, disconnects socket, clears all tokens, and resets user state
 
 ## Chat Feature (Real-time Messaging)
 
