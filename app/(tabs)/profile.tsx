@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +18,7 @@ import { useAuth } from "@/lib/auth";
 import { EditProfileSection } from "@/components/EditProfileSection";
 import { EditPrompts } from "@/components/EditPrompts";
 import { SettingsScreen } from "@/components/SettingsScreen";
+import * as ImagePicker from "expo-image-picker";
 
 interface ApiPhoto {
   id: string;
@@ -461,12 +463,59 @@ export default function MyProfileScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [photoLoading, setPhotoLoading] = useState<number | null>(null);
 
   const { data: apiProfile, isLoading, error } = useQuery<ApiProfile>({
     queryKey: ["/api/mobile/profile"],
   });
 
   const profile: DisplayProfile | null = apiProfile ? mapApiToDisplay(apiProfile) : null;
+
+  const handleDeletePhoto = useCallback(async (photoId: string, index: number) => {
+    setPhotoLoading(index);
+    try {
+      await apiRequest("DELETE", `/api/mobile/profile/photos/${photoId}`);
+      queryClient.invalidateQueries({ queryKey: ["/api/mobile/profile"] });
+    } catch {
+      Alert.alert("Error", "Failed to delete photo. Please try again.");
+    } finally {
+      setPhotoLoading(null);
+    }
+  }, []);
+
+  const handlePickPhoto = useCallback(async (index: number) => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Please allow access to your photo library to upload photos.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [3, 4],
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (result.canceled || !result.assets?.[0]?.base64) return;
+
+    setPhotoLoading(index);
+    try {
+      const asset = result.assets[0];
+      const mimeType = asset.mimeType || "image/jpeg";
+      const photoData = `data:${mimeType};base64,${asset.base64}`;
+      await apiRequest("POST", "/api/mobile/profile/photos", {
+        photoData,
+        displayOrder: index,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/mobile/profile"] });
+    } catch {
+      Alert.alert("Error", "Failed to upload photo. Please try again.");
+    } finally {
+      setPhotoLoading(null);
+    }
+  }, []);
 
   const profileMutation = useMutation({
     mutationFn: async (body: Record<string, unknown>) => {
@@ -683,11 +732,41 @@ export default function MyProfileScreen() {
           >
             {profile.photos.map((data, index) =>
               data ? (
-                <Image key={index} source={{ uri: data }} style={styles.photo} />
-              ) : (
-                <View key={index} style={styles.photoPlaceholder}>
-                  <Text style={styles.photoPlaceholderText}>+</Text>
+                <View key={index} style={styles.photoWrapper}>
+                  <Image source={{ uri: data }} style={styles.photo} />
+                  {photoLoading === index ? (
+                    <View style={styles.photoRemoveButton}>
+                      <ActivityIndicator size="small" color="#fff" />
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.photoRemoveButton}
+                      onPress={() => {
+                        const photoId = profile.photoIds[index];
+                        if (photoId) handleDeletePhoto(photoId, index);
+                      }}
+                      activeOpacity={0.7}
+                      testID={`remove-photo-${index}`}
+                    >
+                      <Ionicons name="close" size={14} color="#fff" />
+                    </TouchableOpacity>
+                  )}
                 </View>
+              ) : (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.photoPlaceholder}
+                  onPress={() => handlePickPhoto(index)}
+                  activeOpacity={0.6}
+                  disabled={photoLoading === index}
+                  testID={`add-photo-${index}`}
+                >
+                  {photoLoading === index ? (
+                    <ActivityIndicator size="small" color="#a3a3a3" />
+                  ) : (
+                    <Text style={styles.photoPlaceholderText}>+</Text>
+                  )}
+                </TouchableOpacity>
               )
             )}
           </ScrollView>
@@ -1024,14 +1103,30 @@ const styles = StyleSheet.create({
   },
   photosContainer: {
     paddingHorizontal: 20,
+    paddingTop: 8,
     gap: 10,
     flexDirection: "row",
+  },
+  photoWrapper: {
+    position: "relative" as const,
   },
   photo: {
     width: 100,
     height: 130,
     borderRadius: 12,
     backgroundColor: "#e5e5e5",
+  },
+  photoRemoveButton: {
+    position: "absolute" as const,
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    zIndex: 1,
   },
   photoPlaceholder: {
     width: 100,
