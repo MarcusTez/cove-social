@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Cove",
-    "slug": "cove",
+    "slug": "cove-social",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -42,6 +42,15 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": "https://replit.com/"
+      },
+      "eas": {
+        "projectId": "2c697850-0d15-44f6-ac79-8ff5be93b9e3"
+      }
+    },
+    "owner": "cove-social"
   }
 }
