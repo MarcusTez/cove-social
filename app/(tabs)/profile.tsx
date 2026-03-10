@@ -7,10 +7,11 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
-  ActivityIndicator,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import LineLoader from "@/components/LineLoader";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/query-client";
@@ -599,8 +600,7 @@ export default function MyProfileScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered, { paddingTop: insets.top + webTopInset }]}>
-        <ActivityIndicator size="large" color="#171717" />
-        <Text style={styles.loadingText}>Loading profile...</Text>
+        <LineLoader />
       </View>
     );
   }
@@ -992,12 +992,6 @@ const styles = StyleSheet.create({
   centered: {
     justifyContent: "center",
     alignItems: "center",
-  },
-  loadingText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: "#737373",
-    marginTop: 12,
   },
   errorText: {
     fontFamily: "Inter_500Medium",

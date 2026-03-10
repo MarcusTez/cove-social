@@ -7,11 +7,11 @@ import {
   FlatList,
   StyleSheet,
   Platform,
-  ActivityIndicator,
   RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import LineLoader from "@/components/LineLoader";
 import { useQuery } from "@tanstack/react-query";
 import { useSocket } from "@/lib/socket";
 import { queryClient } from "@/lib/query-client";
@@ -167,7 +167,7 @@ export default function ChatScreen() {
       </View>
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color="#737373" />
+          <LineLoader />
         </View>
       ) : !conversations || conversations.length === 0 ? (
         <View style={styles.emptyContainer}>

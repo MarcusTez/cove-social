@@ -5,12 +5,12 @@ import {
   ScrollView,
   StyleSheet,
   Platform,
-  ActivityIndicator,
   RefreshControl,
   Alert,
   TouchableOpacity,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import LineLoader from "@/components/LineLoader";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { ProfileCard } from "@/components/ProfileCard";
@@ -137,7 +137,7 @@ export default function HomeScreen() {
           { paddingTop: insets.top + webTopInset },
         ]}
       >
-        <ActivityIndicator size="large" color="#171717" />
+        <LineLoader />
       </View>
     );
   }
