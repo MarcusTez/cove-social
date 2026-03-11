@@ -260,7 +260,7 @@ export default function HomeScreen() {
         </Text>
         <Text style={styles.footerText}>
           No algorithms pushing volume. No endless feeds. Just considered
-          introductions and the space to begin.
+          introductions, real conversation, and the space to see what could grow.
         </Text>
       </View>
     </ScrollView>
