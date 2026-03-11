@@ -58,7 +58,7 @@ export function ProfileCard({
 
       {overlapTags && overlapTags.length > 0 && (
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Why we think you're a match</Text>
+          <Text style={styles.sectionLabel}>Why we introduced you</Text>
           <View style={styles.tagsContainer}>
             {overlapTags.map((tag, index) => (
               <View key={index} style={styles.matchTag}>
