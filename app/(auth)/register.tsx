@@ -246,6 +246,7 @@ export default function RegisterScreen() {
             </View>
           </View>
         </View>
+        <Text style={styles.versionText}>v1.0.4</Text>
       </ScrollView>
 
       <Modal
@@ -521,5 +522,12 @@ const styles = StyleSheet.create({
   },
   modalOptionTextSelected: {
     fontFamily: "Inter_500Medium",
+  },
+  versionText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    color: "#a3a3a3",
+    textAlign: "center",
+    paddingVertical: 16,
   },
 });
