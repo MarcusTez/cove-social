@@ -224,7 +224,7 @@ export default function HomeScreen() {
     >
       <Text style={styles.title}>This week's introductions</Text>
       <Text style={styles.subtitle}>
-        We introduce slowly and with care.{"\n"}What unfolds is up to you.
+        We introduce slowly and with care.{"\n"}A social life rarely changes through volume. It changes through a few people who truly matter.
       </Text>
 
       <View style={styles.cardsContainer}>
