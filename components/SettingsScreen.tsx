@@ -434,7 +434,7 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
           <View style={styles.statusRow}>
             <Text style={styles.statusLabel}>Membership status</Text>
             <Text style={styles.statusValue}>
-              {subscriptionStatus === "active" ? "Active" : subscriptionStatus || "—"}
+              {subscriptionStatus === "active" || subscriptionStatus === "setup_complete" ? "Active" : subscriptionStatus || "—"}
             </Text>
           </View>
           <View style={styles.divider} />
