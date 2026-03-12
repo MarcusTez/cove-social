@@ -192,7 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const data = await res.json();
 
-    if (!data.hasActiveAccess) {
+    if (!data.user.hasActiveAccess) {
       throw new Error("You don't have an active membership. Please visit cove-social.com to get access.");
     }
 
