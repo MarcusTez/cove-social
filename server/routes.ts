@@ -1,3 +1,21 @@
+/*
+ * ============================================================
+ *  API ROUTES — DEV / PROD ENVIRONMENT SPLIT
+ * ============================================================
+ *
+ *  Development (NODE_ENV != "production"):
+ *    Auth routes (/auth/login, /auth/refresh, /profile, /auth/logout)
+ *    are handled locally by registerDevAuthRoutes() with mock data.
+ *    Dev credentials and tokens are defined in server/config.ts
+ *    (DEV_AUTH object) — that is the single source of truth.
+ *
+ *  Production (NODE_ENV == "production"):
+ *    All routes proxy to the live Cove API via proxyToCove().
+ *
+ *  See server/config.ts for the full environment configuration.
+ * ============================================================
+ */
+
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "node:http";
 import {
@@ -12,6 +30,10 @@ import { setupSocketIO } from "./socket";
 import { COVE_API_BASE, IS_DEV, DEV_AUTH } from "./config";
 
 async function proxyToCove(req: Request, res: Response) {
+  if (IS_DEV) {
+    console.warn(`[DEV WARNING] Proxying ${req.method} ${req.path} to prod Cove API — this route has no dev bypass`);
+  }
+
   const path = req.path.replace("/api/mobile", "");
   const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
   const targetUrl = `${COVE_API_BASE}${path}${queryString ? `?${queryString}` : ""}`;
