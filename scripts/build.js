@@ -105,24 +105,92 @@ async function checkMetroHealth() {
   }
 }
 
-async function killExistingMetro() {
-  try {
-    const { execSync } = require("child_process");
-    execSync("lsof -ti:8081 | xargs kill -9 2>/dev/null || true", {
-      stdio: "ignore",
-    });
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  } catch {
-    // ignore errors
+function findPidsOnPort(port) {
+  const hexPort = port.toString(16).toUpperCase().padStart(4, "0");
+  const pids = new Set();
+  const inodes = new Set();
+
+  const tcpFiles = ["/proc/self/net/tcp", "/proc/self/net/tcp6"];
+  for (const tcpFile of tcpFiles) {
+    try {
+      const tcpData = fs.readFileSync(tcpFile, "utf-8");
+      for (const line of tcpData.split("\n").slice(1)) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length < 10) continue;
+        const localAddr = parts[1];
+        const localPort = localAddr.split(":").pop();
+        if (localPort === hexPort && parts[3] === "0A") {
+          inodes.add(parts[9]);
+        }
+      }
+    } catch {
+      continue;
+    }
   }
+
+  if (inodes.size === 0) return [];
+
+  const procDirs = fs.readdirSync("/proc").filter((d) => /^\d+$/.test(d));
+  for (const pid of procDirs) {
+    try {
+      const fdDir = `/proc/${pid}/fd`;
+      const fds = fs.readdirSync(fdDir);
+      for (const fd of fds) {
+        try {
+          const link = fs.readlinkSync(`${fdDir}/${fd}`);
+          for (const inode of inodes) {
+            if (link.includes(`socket:[${inode}]`)) {
+              pids.add(parseInt(pid, 10));
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return Array.from(pids);
+}
+
+async function killExistingMetro() {
+  const pids = findPidsOnPort(8081);
+
+  if (pids.length === 0) {
+    console.log("No process found on port 8081");
+    return false;
+  }
+
+  console.log(`Killing PIDs on port 8081: ${pids.join(", ")}`);
+  for (const pid of pids) {
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      // process may have already exited
+    }
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  return true;
 }
 
 async function startMetro(expoPublicDomain) {
   const isRunning = await checkMetroHealth();
   if (isRunning) {
     console.log("Killing existing Metro to ensure correct EXPO_PUBLIC_DOMAIN...");
-    await killExistingMetro();
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    const killed = await killExistingMetro();
+    if (!killed) {
+      console.error("WARNING: Could not kill existing Metro on port 8081");
+    }
+    const stillRunning = await checkMetroHealth();
+    if (stillRunning) {
+      exitWithError(
+        "Failed to stop existing Metro on port 8081. Cannot guarantee correct EXPO_PUBLIC_DOMAIN in bundle.",
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
   console.log("Starting Metro...");
