@@ -85,4 +85,3 @@ ensurePreviewReachable = "/status"
 [userenv.development]
 
 [userenv.production]
-EXPO_PUBLIC_COVE_API_URL = "https://www.cove-social.com/api/mobile"
