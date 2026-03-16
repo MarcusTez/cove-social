@@ -3,7 +3,7 @@
  *  API ROUTES — DEV / PROD ENVIRONMENT SPLIT
  * ============================================================
  *
- *  Development (NODE_ENV != "production"):
+ *  Development (NODE_ENV == "development"):
  *    Auth routes (/auth/login, /auth/refresh, /profile, /auth/logout)
  *    are handled locally by registerDevAuthRoutes() with mock data.
  *    Dev credentials and tokens are defined in server/config.ts
