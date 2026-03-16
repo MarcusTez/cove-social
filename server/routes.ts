@@ -3,14 +3,17 @@
  *  API ROUTES — DEV / PROD ENVIRONMENT SPLIT
  * ============================================================
  *
- *  Development (NODE_ENV == "development"):
- *    Auth routes (/auth/login, /auth/refresh, /profile, /auth/logout)
- *    are handled locally by registerDevAuthRoutes() with mock data.
- *    Dev credentials and tokens are defined in server/config.ts
- *    (DEV_AUTH object) — that is the single source of truth.
+ *  Development  (NODE_ENV = "development", i.e. Replit / Expo Go)
+ *    → ALL /api/mobile/* routes proxy to the dev Cove API.
+ *    → URL is set via EXPO_PUBLIC_COVE_API_URL env var.
+ *    → Dev API: https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile
  *
- *  Production (NODE_ENV == "production"):
- *    All routes proxy to the live Cove API via proxyToCove().
+ *  Production  (NODE_ENV = "production", i.e. App Store builds)
+ *    → ALL /api/mobile/* routes proxy to the prod Cove API.
+ *    → URL is hardcoded in server/config.ts.
+ *
+ *  The only routes NOT proxied are the local chat endpoints
+ *  (/api/mobile/conversations/*) which hit our own PostgreSQL DB.
  *
  *  See server/config.ts for the full environment configuration.
  * ============================================================
@@ -27,13 +30,9 @@ import {
   deleteConversation,
 } from "./chat";
 import { setupSocketIO } from "./socket";
-import { COVE_API_BASE, IS_DEV, DEV_AUTH } from "./config";
+import { COVE_API_BASE } from "./config";
 
 async function proxyToCove(req: Request, res: Response) {
-  if (IS_DEV) {
-    console.warn(`[DEV WARNING] Proxying ${req.method} ${req.path} to prod Cove API — this route has no dev bypass`);
-  }
-
   const path = req.path.replace("/api/mobile", "");
   const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
   const targetUrl = `${COVE_API_BASE}${path}${queryString ? `?${queryString}` : ""}`;
@@ -76,96 +75,12 @@ async function proxyToCove(req: Request, res: Response) {
   }
 }
 
-const DEV_USER = {
-  id: DEV_AUTH.USER_ID,
-  firstName: "Mitesh",
-  lastName: "Naik",
-  email: DEV_AUTH.EMAIL,
-  gender: "male",
-  londonAreas: ["Shoreditch"],
-  personalityWords: ["Curious", "Adventurous"],
-  regularRituals: ["Morning coffee"],
-  thisWeekActivities: ["Working out"],
-  valuesLifestyle: ["Growth"],
-  lifestylePreferences: ["Active"],
-  upcomingPlans: ["Weekend brunch"],
-  socialWeekStyle: "balanced",
-  relationshipStatus: "single",
-  lifeStageCareer: ["Tech"],
-  lifeStageSituation: ["Professional"],
-  lifeStageGoals: ["Career growth"],
-  friendshipValues: ["Honesty"],
-  friendshipPractical: ["Reliable"],
-  problemReasons: [],
-  instagramHandle: "",
-  linkedinUrl: "",
-  commitmentLevel: "high",
-  selectedPlan: "premium",
-  subscriptionStatus: "active",
-  planInterval: "monthly",
-  currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-  canceledAt: null,
-  accountStatus: "active",
-  matchingOptIn: true,
-  pauseUntil: null,
-  adminHold: false,
-  inviteCode: "DEV001",
-  createdAt: new Date().toISOString(),
-  hasActiveAccess: true,
-};
-
-function registerDevAuthRoutes(app: Express) {
-  app.post("/api/mobile/auth/login", (req: Request, res: Response) => {
-    const { email, password } = req.body;
-    if (email === DEV_AUTH.EMAIL && password === DEV_AUTH.PASSWORD) {
-      console.log("[DEV] Login successful for dev user");
-      return res.json({
-        accessToken: DEV_AUTH.ACCESS_TOKEN,
-        refreshToken: DEV_AUTH.REFRESH_TOKEN,
-        user: DEV_USER,
-      });
-    }
-    return res.status(401).json({ error: "Invalid email or password" });
-  });
-
-  app.post("/api/mobile/auth/refresh", (req: Request, res: Response) => {
-    const { refreshToken } = req.body;
-    if (refreshToken === DEV_AUTH.REFRESH_TOKEN) {
-      console.log("[DEV] Token refresh successful for dev user");
-      return res.json({
-        accessToken: DEV_AUTH.ACCESS_TOKEN,
-        refreshToken: DEV_AUTH.REFRESH_TOKEN,
-      });
-    }
-    return res.status(401).json({ error: "Invalid refresh token" });
-  });
-
-  app.get("/api/mobile/profile", (req: Request, res: Response) => {
-    const auth = req.headers.authorization;
-    if (auth === `Bearer ${DEV_AUTH.ACCESS_TOKEN}`) {
-      return res.json(DEV_USER);
-    }
-    return res.status(401).json({ error: "Unauthorized" });
-  });
-
-  app.post("/api/mobile/auth/logout", (_req: Request, res: Response) => {
-    console.log("[DEV] Logout for dev user");
-    return res.json({ success: true });
-  });
-}
-
 export async function registerRoutes(app: Express): Promise<Server> {
-  if (IS_DEV) {
-    registerDevAuthRoutes(app);
-  }
-
   app.post("/api/mobile/waitlist", proxyToCove);
-  if (!IS_DEV) {
-    app.post("/api/mobile/auth/login", proxyToCove);
-    app.post("/api/mobile/auth/refresh", proxyToCove);
-    app.post("/api/mobile/auth/logout", proxyToCove);
-    app.get("/api/mobile/profile", proxyToCove);
-  }
+  app.post("/api/mobile/auth/login", proxyToCove);
+  app.post("/api/mobile/auth/refresh", proxyToCove);
+  app.post("/api/mobile/auth/logout", proxyToCove);
+  app.get("/api/mobile/profile", proxyToCove);
   app.patch("/api/mobile/profile", proxyToCove);
   app.delete("/api/mobile/profile", proxyToCove);
   app.get("/api/mobile/profile/photos", proxyToCove);

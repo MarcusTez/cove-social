@@ -6,7 +6,7 @@ A mobile application built with Expo (React Native) and Express backend. A socia
 
 - **Frontend**: Expo SDK 54 with React Native, using expo-router for file-based routing
 - **Backend**: Express server (TypeScript) on port 5000
-- **External API**: Cove API at `EXPO_PUBLIC_COVE_API_URL` for auth, profiles, matches, etc.
+- **External API**: Cove API proxied through the Express backend — dev points to the Replit-hosted dev Cove API (URL set via `EXPO_PUBLIC_COVE_API_URL` env var in development scope), prod hardcoded to `https://www.cove-social.com/api/mobile`
 - **Database**: PostgreSQL with Drizzle ORM
 - **Real-time**: Socket.IO for live messaging (attached to Express HTTP server)
 - **State**: React Query (@tanstack/react-query) for server state

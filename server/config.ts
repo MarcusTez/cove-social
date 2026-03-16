@@ -3,39 +3,50 @@
  *  ENVIRONMENT CONFIGURATION — DEV vs PROD API ROUTING
  * ============================================================
  *
- *  Preview / Expo Go  (NODE_ENV = "development")
- *    → Auth routes (login, refresh, profile) are handled locally
- *      with mock dev credentials. No requests hit the live
- *      Cove API for these endpoints.
- *    → Dev credentials: miteshnaik@test.com / Test123!
+ *  Development  (NODE_ENV = "development", i.e. Replit / Expo Go)
+ *    → ALL routes proxy to the dev Cove API.
+ *    → URL read from EXPO_PUBLIC_COVE_API_URL (required — the server
+ *      will throw on startup if it is not set, preventing silent
+ *      fallback to the production API).
+ *    → Dev API: https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile
+ *    → Set EXPO_PUBLIC_COVE_API_URL in Replit's environment variables
+ *      (development scope) to that URL.
  *
- *  Production / App Store  (NODE_ENV = "production")
- *    → All requests proxy to the live Cove API at
- *      https://www.cove-social.com/api/mobile
+ *  Production  (NODE_ENV = "production", i.e. App Store builds)
+ *    → ALL routes proxy to the live prod Cove API.
+ *    → URL is hardcoded below — EXPO_PUBLIC_COVE_API_URL is
+ *      intentionally ignored in production so it can never be
+ *      accidentally overridden by an env var.
  *
- *  DO NOT change the production fallback URL or remove the
- *  NODE_ENV check without understanding the impact on both
- *  environments. This separation exists to prevent dev/preview
- *  builds from accidentally hitting the production API.
+ *  DO NOT add a fallback to the prod URL for development.
+ *  DO NOT change the prod URL below without a deliberate decision.
  * ============================================================
  */
 
+const PROD_COVE_API = "https://www.cove-social.com/api/mobile";
+
 export const IS_DEV = process.env.NODE_ENV === "development";
 
-export const COVE_API_BASE =
-  process.env.EXPO_PUBLIC_COVE_API_URL || "https://www.cove-social.com/api/mobile";
+function resolveCoveApiBase(): string {
+  if (!IS_DEV) {
+    return PROD_COVE_API;
+  }
+  const devUrl = process.env.EXPO_PUBLIC_COVE_API_URL;
+  if (!devUrl) {
+    throw new Error(
+      "[ENV] EXPO_PUBLIC_COVE_API_URL is not set.\n" +
+      "In development, this variable is required to point to the dev Cove API.\n" +
+      "Set it in Replit's environment variables (development scope) to:\n" +
+      "https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile"
+    );
+  }
+  return devUrl;
+}
 
-export const DEV_AUTH = {
-  EMAIL: "miteshnaik@test.com",
-  PASSWORD: "Test123!",
-  ACCESS_TOKEN: "dev-access-token-cove-local",
-  REFRESH_TOKEN: "dev-refresh-token-cove-local",
-  USER_ID: "dev-user-001",
-} as const;
+export const COVE_API_BASE = resolveCoveApiBase();
 
 if (IS_DEV) {
-  console.log("[ENV] Running in DEVELOPMENT mode — auth routes use local dev bypass");
-  console.log(`[ENV] Dev login: ${DEV_AUTH.EMAIL}`);
+  console.log(`[ENV] DEVELOPMENT — proxying all routes to dev Cove API: ${COVE_API_BASE}`);
 } else {
-  console.log(`[ENV] Running in PRODUCTION mode — proxying to ${COVE_API_BASE}`);
+  console.log(`[ENV] PRODUCTION — proxying all routes to prod Cove API: ${COVE_API_BASE}`);
 }
