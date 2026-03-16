@@ -105,11 +105,24 @@ async function checkMetroHealth() {
   }
 }
 
+async function killExistingMetro() {
+  try {
+    const { execSync } = require("child_process");
+    execSync("lsof -ti:8081 | xargs kill -9 2>/dev/null || true", {
+      stdio: "ignore",
+    });
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  } catch {
+    // ignore errors
+  }
+}
+
 async function startMetro(expoPublicDomain) {
   const isRunning = await checkMetroHealth();
   if (isRunning) {
-    console.log("Metro already running");
-    return;
+    console.log("Killing existing Metro to ensure correct EXPO_PUBLIC_DOMAIN...");
+    await killExistingMetro();
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 
   console.log("Starting Metro...");
