@@ -51,7 +51,8 @@ lib/
   socket.ts             # Socket.IO client, useSocket hook, generateClientMessageId
 server/
   index.ts              # Express server entry
-  routes.ts             # API routes (Cove proxy + chat endpoints + Socket.IO setup)
+  config.ts             # Environment config: NODE_ENV-based dev/prod API split (DO NOT remove the dev bypass)
+  routes.ts             # API routes (Cove proxy + dev auth bypass + chat endpoints + Socket.IO setup)
   db.ts                 # Drizzle ORM database connection
   chat.ts               # Chat REST API handlers (conversations, messages, read receipts)
   socket.ts             # Socket.IO event handlers (real-time messaging, typing indicators)
@@ -100,9 +101,22 @@ shared/
 - Conversations created from match profile "Message" CTA via `POST /api/mobile/conversations`
 - Unread count = messages where createdAt > participant.lastReadAt AND senderId != me
 
+## Dev/Prod API Environment Split
+
+The server uses `NODE_ENV` to decide how auth routes are handled:
+
+- **Development** (`NODE_ENV=development`, i.e. Replit / Expo Go preview):
+  - Auth routes (`/auth/login`, `/auth/refresh`, `/profile`, `/auth/logout`) are handled locally with a mock dev bypass — no requests reach the live Cove API for these endpoints.
+  - Dev credentials: `miteshnaik@test.com` / `Test123!`
+  - All other API routes still proxy to the Cove API as normal.
+  - Configuration lives in `server/config.ts` with a prominent comment block explaining the split.
+
+- **Production** (`NODE_ENV=production`, i.e. App Store / deployed builds):
+  - All routes proxy to the live Cove API at `https://www.cove-social.com/api/mobile`.
+
 ## Environment Variables
 
-- `EXPO_PUBLIC_COVE_API_URL`: Base URL for the Cove API (environment-scoped: dev uses `https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile`, production uses `https://www.cove-social.com/api/mobile`)
+- `EXPO_PUBLIC_COVE_API_URL`: Override for the Cove API base URL (defaults to `https://www.cove-social.com/api/mobile` in production). In development, auth routes use the local dev bypass regardless of this value.
 - `EXPO_PUBLIC_DOMAIN`: Auto-set by Replit for the Express backend URL
 - `DATABASE_URL`: PostgreSQL connection string (auto-set by Replit)
 

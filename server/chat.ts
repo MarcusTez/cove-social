@@ -2,15 +2,18 @@ import type { Request, Response } from "express";
 import { db } from "./db";
 import { conversations, conversationParticipants, messages } from "../shared/schema";
 import { eq, and, desc, lt, ne, sql } from "drizzle-orm";
+import { COVE_API_BASE, IS_DEV, DEV_AUTH } from "./config";
 
 const userIdCache = new Map<string, { userId: string; expiresAt: number }>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
-const COVE_API_BASE = process.env.EXPO_PUBLIC_COVE_API_URL || "https://www.cove-social.com/api/mobile";
-
 export async function validateTokenAndGetUserId(authHeader: string | undefined): Promise<string | null> {
   if (!authHeader?.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7);
+
+  if (IS_DEV && token === DEV_AUTH.ACCESS_TOKEN) {
+    return DEV_AUTH.USER_ID;
+  }
 
   const cached = userIdCache.get(token);
   if (cached && cached.expiresAt > Date.now()) {

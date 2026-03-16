@@ -9,8 +9,7 @@ import {
   deleteConversation,
 } from "./chat";
 import { setupSocketIO } from "./socket";
-
-const COVE_API_BASE = process.env.EXPO_PUBLIC_COVE_API_URL || "https://www.cove-social.com/api/mobile";
+import { COVE_API_BASE, IS_DEV, DEV_AUTH } from "./config";
 
 async function proxyToCove(req: Request, res: Response) {
   const path = req.path.replace("/api/mobile", "");
@@ -55,12 +54,96 @@ async function proxyToCove(req: Request, res: Response) {
   }
 }
 
+const DEV_USER = {
+  id: DEV_AUTH.USER_ID,
+  firstName: "Mitesh",
+  lastName: "Naik",
+  email: DEV_AUTH.EMAIL,
+  gender: "male",
+  londonAreas: ["Shoreditch"],
+  personalityWords: ["Curious", "Adventurous"],
+  regularRituals: ["Morning coffee"],
+  thisWeekActivities: ["Working out"],
+  valuesLifestyle: ["Growth"],
+  lifestylePreferences: ["Active"],
+  upcomingPlans: ["Weekend brunch"],
+  socialWeekStyle: "balanced",
+  relationshipStatus: "single",
+  lifeStageCareer: ["Tech"],
+  lifeStageSituation: ["Professional"],
+  lifeStageGoals: ["Career growth"],
+  friendshipValues: ["Honesty"],
+  friendshipPractical: ["Reliable"],
+  problemReasons: [],
+  instagramHandle: "",
+  linkedinUrl: "",
+  commitmentLevel: "high",
+  selectedPlan: "premium",
+  subscriptionStatus: "active",
+  planInterval: "monthly",
+  currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+  canceledAt: null,
+  accountStatus: "active",
+  matchingOptIn: true,
+  pauseUntil: null,
+  adminHold: false,
+  inviteCode: "DEV001",
+  createdAt: new Date().toISOString(),
+  hasActiveAccess: true,
+};
+
+function registerDevAuthRoutes(app: Express) {
+  app.post("/api/mobile/auth/login", (req: Request, res: Response) => {
+    const { email, password } = req.body;
+    if (email === DEV_AUTH.EMAIL && password === DEV_AUTH.PASSWORD) {
+      console.log("[DEV] Login successful for dev user");
+      return res.json({
+        accessToken: DEV_AUTH.ACCESS_TOKEN,
+        refreshToken: DEV_AUTH.REFRESH_TOKEN,
+        user: DEV_USER,
+      });
+    }
+    return res.status(401).json({ error: "Invalid email or password" });
+  });
+
+  app.post("/api/mobile/auth/refresh", (req: Request, res: Response) => {
+    const { refreshToken } = req.body;
+    if (refreshToken === DEV_AUTH.REFRESH_TOKEN) {
+      console.log("[DEV] Token refresh successful for dev user");
+      return res.json({
+        accessToken: DEV_AUTH.ACCESS_TOKEN,
+        refreshToken: DEV_AUTH.REFRESH_TOKEN,
+      });
+    }
+    return res.status(401).json({ error: "Invalid refresh token" });
+  });
+
+  app.get("/api/mobile/profile", (req: Request, res: Response) => {
+    const auth = req.headers.authorization;
+    if (auth === `Bearer ${DEV_AUTH.ACCESS_TOKEN}`) {
+      return res.json(DEV_USER);
+    }
+    return res.status(401).json({ error: "Unauthorized" });
+  });
+
+  app.post("/api/mobile/auth/logout", (_req: Request, res: Response) => {
+    console.log("[DEV] Logout for dev user");
+    return res.json({ success: true });
+  });
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  if (IS_DEV) {
+    registerDevAuthRoutes(app);
+  }
+
   app.post("/api/mobile/waitlist", proxyToCove);
-  app.post("/api/mobile/auth/login", proxyToCove);
-  app.post("/api/mobile/auth/refresh", proxyToCove);
-  app.post("/api/mobile/auth/logout", proxyToCove);
-  app.get("/api/mobile/profile", proxyToCove);
+  if (!IS_DEV) {
+    app.post("/api/mobile/auth/login", proxyToCove);
+    app.post("/api/mobile/auth/refresh", proxyToCove);
+    app.post("/api/mobile/auth/logout", proxyToCove);
+    app.get("/api/mobile/profile", proxyToCove);
+  }
   app.patch("/api/mobile/profile", proxyToCove);
   app.delete("/api/mobile/profile", proxyToCove);
   app.get("/api/mobile/profile/photos", proxyToCove);
