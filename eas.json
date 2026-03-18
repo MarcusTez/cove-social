@@ -11,13 +11,13 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "www.cove-social.com"
+        "EXPO_PUBLIC_DOMAIN": "cove-social.replit.app"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "www.cove-social.com"
+        "EXPO_PUBLIC_DOMAIN": "cove-social.replit.app"
       }
     }
   },
