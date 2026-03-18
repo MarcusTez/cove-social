@@ -134,7 +134,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!res.ok) {
-        await removeRefreshToken();
+        if (res.status >= 400 && res.status < 500) {
+          await removeRefreshToken();
+        }
         setAccessToken(null);
         return false;
       }
@@ -163,12 +165,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true;
       }
 
+      if (profileRes.status >= 400 && profileRes.status < 500) {
+        await removeRefreshToken();
+      }
       setAccessToken(null);
-      await removeRefreshToken();
       return false;
     } catch {
       setAccessToken(null);
-      await removeRefreshToken();
       return false;
     }
   }, []);
