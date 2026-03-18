@@ -134,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
+        if (res.status === 400 || res.status === 401 || res.status === 403) {
           await removeRefreshToken();
         }
         setAccessToken(null);
