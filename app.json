@@ -21,7 +21,7 @@
       }
     },
     "android": {
-      "package": "com.cove",
+      "package": "com.cove.app",
       "adaptiveIcon": {
         "backgroundColor": "#FAF8F3",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
