@@ -134,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (!res.ok) {
-        if (res.status >= 400 && res.status < 500) {
+        if (res.status === 401 || res.status === 403) {
           await removeRefreshToken();
         }
         setAccessToken(null);
@@ -156,7 +156,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           validateMembershipStatus(profileData);
         } catch {
           setAccessToken(null);
-          await removeRefreshToken();
           return false;
         }
 
@@ -165,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true;
       }
 
-      if (profileRes.status >= 400 && profileRes.status < 500) {
+      if (profileRes.status === 401 || profileRes.status === 403) {
         await removeRefreshToken();
       }
       setAccessToken(null);
