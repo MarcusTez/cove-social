@@ -78,6 +78,7 @@ interface DisplayProfile {
   photos: (string | null)[];
   photoIds: (string | null)[];
   name: string;
+  firstName: string;
   gender: string;
   city: string;
   prompts: { id?: string; question: string; answer: string }[];
@@ -113,6 +114,7 @@ function mapApiToDisplay(api: ApiProfile): DisplayProfile {
     photos: photoSlots,
     photoIds: photoIdSlots,
     name: [api.firstName, api.lastName].filter(Boolean).join(" "),
+    firstName: api.firstName || "",
     gender: api.gender || "",
     city: api.city || "",
     prompts: (api.prompts || [])
@@ -652,7 +654,7 @@ export default function MyProfileScreen() {
             >
               <View>
                 <Text style={styles.basicFieldLabel}>Name</Text>
-                <Text style={styles.basicFieldValue}>{profile.name}</Text>
+                <Text style={styles.basicFieldValue}>{profile.firstName}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
             </TouchableOpacity>
@@ -787,7 +789,7 @@ export default function MyProfileScreen() {
           <View style={styles.infoGrid}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Name:</Text>
-              <Text style={styles.infoValue}>{profile.name || "Not set"}</Text>
+              <Text style={styles.infoValue}>{profile.firstName || "Not set"}</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Gender:</Text>
