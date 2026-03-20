@@ -1,8 +1,14 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
-import { Platform } from "react-native";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode, useRef } from "react";
+import { Platform, AppState, AppStateStatus } from "react-native";
 import { fetch } from "expo/fetch";
 import * as SecureStore from "expo-secure-store";
-import { setAccessToken, getAccessToken, queryClient } from "@/lib/query-client";
+import {
+  setAccessToken,
+  getAccessToken,
+  queryClient,
+  setRefreshHandler,
+  setAuthFailureHandler,
+} from "@/lib/query-client";
 import { connectSocket, disconnectSocket } from "@/lib/socket";
 
 const REFRESH_TOKEN_KEY = "cove_refresh_token";
@@ -121,6 +127,7 @@ function validateMembershipStatus(user: CoveUser): void {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CoveUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   const attemptRefresh = useCallback(async (): Promise<boolean> => {
     const refreshToken = await getRefreshToken();
@@ -175,8 +182,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const silentTokenRefresh = useCallback(async (): Promise<boolean> => {
+    const refreshToken = await getRefreshToken();
+    if (!refreshToken) return false;
+
+    try {
+      const res = await fetch(`${getProxyBase()}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 400 || res.status === 401 || res.status === 403) {
+          await removeRefreshToken();
+        }
+        setAccessToken(null);
+        return false;
+      }
+
+      const data = await res.json();
+      setAccessToken(data.accessToken);
+      await storeRefreshToken(data.refreshToken);
+      return true;
+    } catch {
+      setAccessToken(null);
+      return false;
+    }
+  }, []);
+
   useEffect(() => {
     attemptRefresh().finally(() => setIsLoading(false));
+  }, [attemptRefresh]);
+
+  useEffect(() => {
+    setRefreshHandler(silentTokenRefresh);
+    setAuthFailureHandler(() => {
+      setAccessToken(null);
+      removeRefreshToken();
+      disconnectSocket();
+      queryClient.clear();
+      setUser(null);
+    });
+
+    return () => {
+      setRefreshHandler(null);
+      setAuthFailureHandler(null);
+    };
+  }, [silentTokenRefresh]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState: AppStateStatus) => {
+      const prevState = appStateRef.current;
+      appStateRef.current = nextState;
+
+      if (
+        (prevState === "background" || prevState === "inactive") &&
+        nextState === "active"
+      ) {
+        attemptRefresh();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, [attemptRefresh]);
 
   const login = useCallback(async (email: string, password: string) => {

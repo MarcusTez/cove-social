@@ -2,6 +2,9 @@ import { fetch } from "expo/fetch";
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 let _accessToken: string | null = null;
+let _refreshHandler: (() => Promise<boolean>) | null = null;
+let _authFailureHandler: (() => void) | null = null;
+let _pendingRefresh: Promise<boolean> | null = null;
 
 export function setAccessToken(token: string | null): string | null {
   const prev = _accessToken;
@@ -11,6 +14,14 @@ export function setAccessToken(token: string | null): string | null {
 
 export function getAccessToken(): string | null {
   return _accessToken;
+}
+
+export function setRefreshHandler(fn: (() => Promise<boolean>) | null): void {
+  _refreshHandler = fn;
+}
+
+export function setAuthFailureHandler(fn: (() => void) | null): void {
+  _authFailureHandler = fn;
 }
 
 export function getApiUrl(): string {
@@ -40,6 +51,15 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
+async function executeRefresh(): Promise<boolean> {
+  if (!_refreshHandler) return false;
+  if (_pendingRefresh) return _pendingRefresh;
+  _pendingRefresh = _refreshHandler().finally(() => {
+    _pendingRefresh = null;
+  });
+  return _pendingRefresh;
+}
+
 export async function apiRequest(
   method: string,
   route: string,
@@ -48,15 +68,27 @@ export async function apiRequest(
   const baseUrl = getApiUrl();
   const url = new URL(route, baseUrl);
 
-  const res = await fetch(url.toString(), {
-    method,
-    headers: {
-      ...getAuthHeaders(),
-      ...(data ? { "Content-Type": "application/json" } : {}),
-    },
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  const makeRequest = () =>
+    fetch(url.toString(), {
+      method,
+      headers: {
+        ...getAuthHeaders(),
+        ...(data ? { "Content-Type": "application/json" } : {}),
+      },
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
+
+  let res = await makeRequest();
+
+  if (res.status === 401 && _refreshHandler) {
+    const refreshed = await executeRefresh();
+    if (refreshed) {
+      res = await makeRequest();
+    } else {
+      _authFailureHandler?.();
+    }
+  }
 
   await throwIfResNotOk(res);
   return res;
@@ -71,13 +103,27 @@ export const getQueryFn: <T>(options: {
     const baseUrl = getApiUrl();
     const url = new URL(queryKey.join("/") as string, baseUrl);
 
-    const res = await fetch(url.toString(), {
-      headers: getAuthHeaders(),
-      credentials: "include",
-    });
+    const makeRequest = () =>
+      fetch(url.toString(), {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    let res = await makeRequest();
+
+    if (res.status === 401) {
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
+
+      if (_refreshHandler) {
+        const refreshed = await executeRefresh();
+        if (refreshed) {
+          res = await makeRequest();
+        } else {
+          _authFailureHandler?.();
+        }
+      }
     }
 
     await throwIfResNotOk(res);
