@@ -620,55 +620,67 @@ export default function MyProfileScreen() {
     );
   }
 
-  if (editingBasic && !editingBasicField) {
+  if (editingBasic) {
     return (
       <View style={[styles.container, { paddingTop: insets.top + webTopInset }]}>
         <View style={styles.basicHeader}>
-          <TouchableOpacity onPress={() => setEditingBasic(false)} activeOpacity={0.7}>
+          <TouchableOpacity
+            onPress={() => {
+              if (editingBasicField) {
+                setEditingBasicField(null);
+              } else {
+                setEditingBasic(false);
+              }
+            }}
+            activeOpacity={0.7}
+          >
             <Text style={styles.backText}>{"\u2190"} Back</Text>
           </TouchableOpacity>
           <Text style={styles.basicTitle}>Basic Information</Text>
         </View>
-        <View style={styles.basicBody}>
-          <TouchableOpacity
-            style={styles.basicFieldCard}
-            onPress={() =>
-              setEditingBasicField({
-                key: "name", title: "Name", type: "text", options: [], field: "name",
-              })
-            }
-            activeOpacity={0.6}
-          >
-            <View>
-              <Text style={styles.basicFieldLabel}>Name</Text>
-              <Text style={styles.basicFieldValue}>{profile.name}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
-          </TouchableOpacity>
 
-          <View style={styles.basicFieldCard}>
-            <View>
-              <Text style={styles.basicFieldLabel}>Gender</Text>
-              <Text style={styles.basicFieldValue}>{profile.gender}</Text>
+        {!editingBasicField && (
+          <View style={styles.basicBody}>
+            <TouchableOpacity
+              style={styles.basicFieldCard}
+              onPress={() =>
+                setEditingBasicField({
+                  key: "name", title: "Name", type: "text", options: [], field: "name",
+                })
+              }
+              activeOpacity={0.6}
+            >
+              <View>
+                <Text style={styles.basicFieldLabel}>Name</Text>
+                <Text style={styles.basicFieldValue}>{profile.name}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
+            </TouchableOpacity>
+
+            <View style={styles.basicFieldCard}>
+              <View>
+                <Text style={styles.basicFieldLabel}>Gender</Text>
+                <Text style={styles.basicFieldValue}>{profile.gender}</Text>
+              </View>
             </View>
+
+            <TouchableOpacity
+              style={styles.basicFieldCard}
+              onPress={() =>
+                setEditingBasicField({
+                  key: "city", title: "City", type: "text", options: [], field: "city",
+                })
+              }
+              activeOpacity={0.6}
+            >
+              <View>
+                <Text style={styles.basicFieldLabel}>City</Text>
+                <Text style={styles.basicFieldValue}>{profile.city || "Not set"}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={styles.basicFieldCard}
-            onPress={() =>
-              setEditingBasicField({
-                key: "city", title: "City", type: "text", options: [], field: "city",
-              })
-            }
-            activeOpacity={0.6}
-          >
-            <View>
-              <Text style={styles.basicFieldLabel}>City</Text>
-              <Text style={styles.basicFieldValue}>{profile.city || "Not set"}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#a3a3a3" />
-          </TouchableOpacity>
-        </View>
+        )}
 
         {editingBasicField && (
           <EditProfileSection
@@ -771,7 +783,7 @@ export default function MyProfileScreen() {
 
           <View style={styles.divider} />
 
-          <SectionHeader title="Basic Information" visibility="Visible" onEdit={() => setEditingBasic(true)} />
+          <SectionHeader title="Basic Information" visibility="Visible" onEdit={() => { setEditingBasicField(null); setEditingBasic(true); }} />
           <View style={styles.infoGrid}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Name:</Text>
