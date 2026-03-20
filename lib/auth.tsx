@@ -129,59 +129,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
-  const attemptRefresh = useCallback(async (): Promise<boolean> => {
-    const refreshToken = await getRefreshToken();
-    if (!refreshToken) return false;
-
-    try {
-      const res = await fetch(`${getProxyBase()}/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
-      });
-
-      if (!res.ok) {
-        if (res.status === 400 || res.status === 401 || res.status === 403) {
-          await removeRefreshToken();
-        }
-        setAccessToken(null);
-        return false;
-      }
-
-      const data = await res.json();
-      setAccessToken(data.accessToken);
-      await storeRefreshToken(data.refreshToken);
-
-      const profileRes = await fetch(`${getProxyBase()}/profile`, {
-        headers: { Authorization: `Bearer ${data.accessToken}` },
-      });
-
-      if (profileRes.ok) {
-        const profileData = await profileRes.json();
-
-        try {
-          validateMembershipStatus(profileData);
-        } catch {
-          setAccessToken(null);
-          return false;
-        }
-
-        setUser(profileData);
-        connectSocket(profileData.id);
-        return true;
-      }
-
-      if (profileRes.status === 401 || profileRes.status === 403) {
-        await removeRefreshToken();
-      }
-      setAccessToken(null);
-      return false;
-    } catch {
-      setAccessToken(null);
-      return false;
-    }
-  }, []);
-
   const silentTokenRefresh = useCallback(async (): Promise<boolean> => {
     const refreshToken = await getRefreshToken();
     if (!refreshToken) return false;
@@ -210,6 +157,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return false;
     }
   }, []);
+
+  const attemptRefresh = useCallback(async (): Promise<boolean> => {
+    const tokenOk = await silentTokenRefresh();
+    if (!tokenOk) return false;
+
+    try {
+      const accessToken = getAccessToken();
+      const profileRes = await fetch(`${getProxyBase()}/profile`, {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
+
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+
+        try {
+          validateMembershipStatus(profileData);
+        } catch {
+          setAccessToken(null);
+          return false;
+        }
+
+        setUser(profileData);
+        connectSocket(profileData.id);
+        return true;
+      }
+
+      if (profileRes.status === 401 || profileRes.status === 403) {
+        await removeRefreshToken();
+      }
+      setAccessToken(null);
+      return false;
+    } catch {
+      setAccessToken(null);
+      return false;
+    }
+  }, [silentTokenRefresh]);
 
   useEffect(() => {
     attemptRefresh().finally(() => setIsLoading(false));

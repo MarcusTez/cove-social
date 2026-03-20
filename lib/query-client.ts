@@ -112,17 +112,18 @@ export const getQueryFn: <T>(options: {
     let res = await makeRequest();
 
     if (res.status === 401) {
-      if (unauthorizedBehavior === "returnNull") {
-        return null;
-      }
-
       if (_refreshHandler) {
         const refreshed = await executeRefresh();
         if (refreshed) {
           res = await makeRequest();
         } else {
           _authFailureHandler?.();
+          if (unauthorizedBehavior === "returnNull") {
+            return null;
+          }
         }
+      } else if (unauthorizedBehavior === "returnNull") {
+        return null;
       }
     }
 
