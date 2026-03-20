@@ -691,9 +691,15 @@ export default function MyProfileScreen() {
             title={editingBasicField.title}
             type={editingBasicField.type}
             options={editingBasicField.options}
-            currentValue={profile[editingBasicField.field] as string}
+            currentValue={editingBasicField.field === "name" ? profile.firstName : (profile[editingBasicField.field] as string)}
             onSave={(value) => {
-              handleSave(editingBasicField.field, value);
+              if (editingBasicField.field === "name") {
+                const existingLastName = apiProfile?.lastName || "";
+                const fullName = existingLastName ? `${value} ${existingLastName}` : value;
+                handleSave(editingBasicField.field, fullName);
+              } else {
+                handleSave(editingBasicField.field, value);
+              }
               setEditingBasicField(null);
             }}
             onClose={() => setEditingBasicField(null)}
