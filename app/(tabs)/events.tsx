@@ -11,132 +11,14 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { MOCK_EVENTS, STATUS_COLORS, type Event } from "@/lib/events-data";
 
-interface Event {
-  id: string;
-  category: string;
-  title: string;
-  date: string;
-  time: string;
-  venue: string;
-  status: "BOOKING OPEN" | "SOLD OUT" | "MEMBERS ONLY";
-  imageUrl: string;
-}
-
-interface EventSection {
-  label: string;
-  events: Event[];
-}
-
-const MOCK_EVENTS: EventSection[] = [
-  {
-    label: "Today",
-    events: [
-      {
-        id: "1",
-        category: "Entertainment",
-        title: "House Quiz",
-        date: "Sat 21 Mar",
-        time: "19:00",
-        venue: "White City House",
-        status: "BOOKING OPEN",
-        imageUrl: "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=400&q=80",
-      },
-      {
-        id: "2",
-        category: "Food & Drink",
-        title: "Kurdish Newroz dinner by Nandine and Taste Cadets",
-        date: "Sat 21 Mar",
-        time: "19:00",
-        venue: "Shoreditch House",
-        status: "BOOKING OPEN",
-        imageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80",
-      },
-      {
-        id: "3",
-        category: "Music",
-        title: "An evening with Jenevieve",
-        date: "Sat 21 Mar",
-        time: "20:30",
-        venue: "180 House",
-        status: "BOOKING OPEN",
-        imageUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400&q=80",
-      },
-      {
-        id: "4",
-        category: "Party",
-        title: "Late Nights at Mews: DJ Fat Tony",
-        date: "Sat 21 Mar",
-        time: "22:00",
-        venue: "Soho Mews House Club",
-        status: "BOOKING OPEN",
-        imageUrl: "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&q=80",
-      },
-    ],
-  },
-  {
-    label: "Tomorrow",
-    events: [
-      {
-        id: "5",
-        category: "Wellness",
-        title: "Sunday Morning Yoga Flow",
-        date: "Sun 22 Mar",
-        time: "09:00",
-        venue: "Chiswick House",
-        status: "BOOKING OPEN",
-        imageUrl: "https://images.unsplash.com/photo-1588286840104-8957b019727f?w=400&q=80",
-      },
-      {
-        id: "6",
-        category: "Food & Drink",
-        title: "Sunday Roast with the Members",
-        date: "Sun 22 Mar",
-        time: "13:00",
-        venue: "Notting Hill House",
-        status: "MEMBERS ONLY",
-        imageUrl: "https://images.unsplash.com/photo-1544025162-d76594f0e243?w=400&q=80",
-      },
-    ],
-  },
-  {
-    label: "This Week",
-    events: [
-      {
-        id: "7",
-        category: "Culture",
-        title: "Private View: New Works by Hurvin Anderson",
-        date: "Wed 25 Mar",
-        time: "18:30",
-        venue: "Electric House",
-        status: "SOLD OUT",
-        imageUrl: "https://images.unsplash.com/photo-1531913223931-b0d3198229ee?w=400&q=80",
-      },
-      {
-        id: "8",
-        category: "Talk",
-        title: "An Evening with Bernardine Evaristo",
-        date: "Thu 26 Mar",
-        time: "19:00",
-        venue: "Soho House",
-        status: "BOOKING OPEN",
-        imageUrl: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=400&q=80",
-      },
-    ],
-  },
-];
-
-const STATUS_COLORS: Record<Event["status"], string> = {
-  "BOOKING OPEN": "#22c55e",
-  "SOLD OUT": "#ef4444",
-  "MEMBERS ONLY": "#a855f7",
-};
-
-function EventCard({ event }: { event: Event }) {
+function EventCard({ event, onPress }: { event: Event; onPress: () => void }) {
   const statusColor = STATUS_COLORS[event.status];
 
   return (
-    <TouchableOpacity style={styles.card} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={onPress}>
       <Image
         source={{ uri: event.imageUrl }}
         style={styles.cardImage}
@@ -166,6 +48,7 @@ function EventCard({ event }: { event: Event }) {
 
 export default function EventsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<"date" | null>(null);
@@ -233,7 +116,11 @@ export default function EventsScreen() {
           <View key={section.label} style={styles.section}>
             <Text style={styles.sectionLabel}>{section.label}</Text>
             {section.events.map((event) => (
-              <EventCard key={event.id} event={event} />
+              <EventCard
+                key={event.id}
+                event={event}
+                onPress={() => router.push(`/event/${event.id}`)}
+              />
             ))}
           </View>
         ))}
