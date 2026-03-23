@@ -99,16 +99,16 @@ export default function EventDetailScreen() {
     : CLOSED_COLOR;
 
   const statusLabel = event.hasRsvped
-    ? "YOU'RE GOING"
+    ? "REQUESTED"
     : event.isOpen
     ? "BOOKING OPEN"
     : "BOOKING CLOSED";
 
   const bookButtonLabel = rsvpMutation.isPending
-    ? "Booking..."
+    ? "Requesting..."
     : event.hasRsvped
-    ? "You're going"
-    : "Book";
+    ? "Requested"
+    : "Request";
 
   return (
     <View style={styles.container}>
@@ -175,6 +175,11 @@ export default function EventDetailScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
+        {event.hasRsvped && (
+          <Text style={styles.requestedHint}>
+            Thanks for your interest, we'll confirm by email.
+          </Text>
+        )}
         <TouchableOpacity
           style={[
             styles.bookButton,
@@ -351,5 +356,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 16,
     color: "#737373",
+  },
+  requestedHint: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    color: "#a3a3a3",
+    textAlign: "center",
+    marginBottom: 8,
   },
 });

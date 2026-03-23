@@ -32,7 +32,7 @@ function EventCard({ event, onPress }: { event: ApiEvent; onPress: () => void })
     : CLOSED_COLOR;
 
   const statusLabel = event.hasRsvped
-    ? "YOU'RE GOING"
+    ? "REQUESTED"
     : event.isOpen
     ? "BOOKING OPEN"
     : "BOOKING CLOSED";
