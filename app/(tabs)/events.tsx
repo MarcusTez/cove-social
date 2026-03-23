@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   View,
   Text,
@@ -90,8 +89,6 @@ export default function EventsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
-  const [activeFilter, setActiveFilter] = useState<"date" | null>(null);
-
   const { data, isLoading, isError, refetch, isRefetching } = useQuery<ApiEventsResponse>({
     queryKey: ["/api/mobile/events"],
   });
@@ -109,42 +106,6 @@ export default function EventsScreen() {
         { paddingTop: insets.top + webTopInset },
       ]}
     >
-      <View style={styles.filterBar}>
-        <View style={styles.filterLeft}>
-          <View style={styles.locationPill}>
-            <Ionicons name="location-sharp" size={13} color="#fafafa" />
-            <Text style={styles.locationPillText}>5 locations</Text>
-          </View>
-          <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-            <Ionicons name="navigate-outline" size={16} color="#171717" />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.filterRight}>
-          <TouchableOpacity
-            style={[
-              styles.filterPill,
-              activeFilter === "date" && styles.filterPillActive,
-            ]}
-            onPress={() =>
-              setActiveFilter(activeFilter === "date" ? null : "date")
-            }
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.filterPillText,
-                activeFilter === "date" && styles.filterPillTextActive,
-              ]}
-            >
-              Date
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-            <Ionicons name="options-outline" size={16} color="#171717" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
@@ -207,67 +168,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9F9F7",
-  },
-  filterBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  filterLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  filterRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  locationPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#171717",
-    borderRadius: 24,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    gap: 5,
-  },
-  locationPillText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 13,
-    color: "#fafafa",
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#d4d4d4",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#F9F9F7",
-  },
-  filterPill: {
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#d4d4d4",
-    backgroundColor: "#F9F9F7",
-  },
-  filterPillActive: {
-    backgroundColor: "#171717",
-    borderColor: "#171717",
-  },
-  filterPillText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: "#171717",
-  },
-  filterPillTextActive: {
-    color: "#fafafa",
   },
   scroll: {
     flex: 1,
