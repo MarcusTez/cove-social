@@ -33,6 +33,7 @@ export default function EventDetailScreen() {
 
   const { data, isLoading, isError } = useQuery<ApiEventResponse>({
     queryKey: ["/api/mobile/events", id],
+    enabled: !!id,
   });
 
   const event = data?.event;
@@ -45,6 +46,7 @@ export default function EventDetailScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/mobile/events", id] });
       qc.invalidateQueries({ queryKey: ["/api/mobile/events"] });
+      Alert.alert("You're booked!", "See you there.");
     },
     onError: (err: Error) => {
       const msg = err.message ?? "";
