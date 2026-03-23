@@ -12,33 +12,57 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { MOCK_EVENTS, STATUS_COLORS, type Event } from "@/lib/events-data";
+import { useQuery } from "@tanstack/react-query";
+import {
+  groupEventsByDate,
+  formatEventDateTime,
+  type ApiEvent,
+  type ApiEventsResponse,
+} from "@/lib/api-events";
 
-function EventCard({ event, onPress }: { event: Event; onPress: () => void }) {
-  const statusColor = STATUS_COLORS[event.status];
+const OPEN_COLOR = "#22c55e";
+const CLOSED_COLOR = "#737373";
+const RSVPED_COLOR = "#6366f1";
+
+function EventCard({ event, onPress }: { event: ApiEvent; onPress: () => void }) {
+  const statusColor = event.hasRsvped
+    ? RSVPED_COLOR
+    : event.isOpen
+    ? OPEN_COLOR
+    : CLOSED_COLOR;
+
+  const statusLabel = event.hasRsvped
+    ? "YOU'RE GOING"
+    : event.isOpen
+    ? "BOOKING OPEN"
+    : "BOOKING CLOSED";
 
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={onPress}>
-      <Image
-        source={{ uri: event.imageUrl }}
-        style={styles.cardImage}
-        resizeMode="cover"
-      />
+      <View style={styles.cardImageContainer}>
+        {event.imageData ? (
+          <Image
+            source={{ uri: event.imageData }}
+            style={styles.cardImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.cardImage, styles.cardImagePlaceholder]} />
+        )}
+      </View>
       <View style={styles.cardContent}>
         <Text style={styles.cardCategory}>{event.category}</Text>
         <Text style={styles.cardTitle} numberOfLines={3}>
           {event.title}
         </Text>
-        <Text style={styles.cardMeta}>
-          {event.date}, {event.time}
-        </Text>
+        <Text style={styles.cardMeta}>{formatEventDateTime(event.eventDatetime)}</Text>
         <Text style={styles.cardVenue} numberOfLines={1}>
-          {event.venue}
+          {event.address}
         </Text>
         <View style={styles.statusRow}>
           <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
           <Text style={[styles.statusText, { color: statusColor }]}>
-            {event.status}
+            {statusLabel}
           </Text>
         </View>
       </View>
@@ -46,16 +70,36 @@ function EventCard({ event, onPress }: { event: Event; onPress: () => void }) {
   );
 }
 
+function SkeletonCard() {
+  return (
+    <View style={styles.card}>
+      <View style={[styles.cardImage, styles.skeleton]} />
+      <View style={styles.cardContent}>
+        <View style={[styles.skeletonLine, { width: 60, height: 12, marginBottom: 6 }]} />
+        <View style={[styles.skeletonLine, { width: "85%", height: 14, marginBottom: 4 }]} />
+        <View style={[styles.skeletonLine, { width: "70%", height: 14, marginBottom: 6 }]} />
+        <View style={[styles.skeletonLine, { width: "60%", height: 13, marginBottom: 4 }]} />
+        <View style={[styles.skeletonLine, { width: "50%", height: 13, marginBottom: 8 }]} />
+        <View style={[styles.skeletonLine, { width: 90, height: 11 }]} />
+      </View>
+    </View>
+  );
+}
+
 export default function EventsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
-  const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<"date" | null>(null);
 
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery<ApiEventsResponse>({
+    queryKey: ["/api/mobile/events"],
+  });
+
+  const sections = data ? groupEventsByDate(data.events) : [];
+
   const handleRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
+    refetch();
   };
 
   return (
@@ -109,10 +153,40 @@ export default function EventsScreen() {
         ]}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          <RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} />
         }
       >
-        {MOCK_EVENTS.map((section) => (
+        {isLoading && (
+          <>
+            <View style={styles.section}>
+              <View style={[styles.skeletonLine, { width: 80, height: 22, marginBottom: 12, marginTop: 8 }]} />
+              <SkeletonCard />
+              <SkeletonCard />
+            </View>
+            <View style={styles.section}>
+              <View style={[styles.skeletonLine, { width: 100, height: 22, marginBottom: 12, marginTop: 8 }]} />
+              <SkeletonCard />
+            </View>
+          </>
+        )}
+
+        {isError && (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={40} color="#d4d4d4" />
+            <Text style={styles.errorText}>Couldn't load events</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => refetch()} activeOpacity={0.7}>
+              <Text style={styles.retryButtonText}>Try again</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!isLoading && !isError && sections.length === 0 && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>No upcoming events</Text>
+          </View>
+        )}
+
+        {sections.map((section) => (
           <View key={section.label} style={styles.section}>
             <Text style={styles.sectionLabel}>{section.label}</Text>
             {section.events.map((event) => (
@@ -217,10 +291,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     gap: 12,
   },
+  cardImageContainer: {
+    flexShrink: 0,
+  },
   cardImage: {
     width: 112,
     height: 130,
     borderRadius: 6,
+    backgroundColor: "#e5e5e5",
+  },
+  cardImagePlaceholder: {
     backgroundColor: "#e5e5e5",
   },
   cardContent: {
@@ -268,5 +348,36 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 11,
     letterSpacing: 0.3,
+  },
+  skeleton: {
+    backgroundColor: "#e5e5e5",
+  },
+  skeletonLine: {
+    backgroundColor: "#e5e5e5",
+    borderRadius: 4,
+    marginBottom: 2,
+  },
+  errorContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 80,
+    gap: 12,
+  },
+  errorText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 15,
+    color: "#737373",
+  },
+  retryButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#d4d4d4",
+  },
+  retryButtonText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: "#171717",
   },
 });

@@ -96,6 +96,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/mobile/matching-preferences", proxyToCove);
   app.put("/api/mobile/matching-preferences", proxyToCove);
   app.get("/api/mobile/subscription", proxyToCove);
+  app.get("/api/mobile/events", proxyToCove);
+  app.get("/api/mobile/events/:id", proxyToCove);
+  app.post("/api/mobile/events/:id/rsvp", proxyToCove);
 
   app.get("/api/mobile/conversations", getConversations);
   app.post("/api/mobile/conversations", createConversation);

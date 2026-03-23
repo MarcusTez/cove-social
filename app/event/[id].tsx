@@ -7,48 +7,106 @@ import {
   StyleSheet,
   Platform,
   Dimensions,
+  ActivityIndicator,
   Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { findEventById, STATUS_COLORS } from "@/lib/events-data";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/query-client";
+import { formatEventDateTime, type ApiEventResponse } from "@/lib/api-events";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const IMAGE_HEIGHT = SCREEN_WIDTH * 0.85;
+
+const OPEN_COLOR = "#22c55e";
+const CLOSED_COLOR = "#737373";
+const RSVPED_COLOR = "#6366f1";
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
+  const qc = useQueryClient();
 
-  const event = findEventById(id);
+  const { data, isLoading, isError } = useQuery<ApiEventResponse>({
+    queryKey: ["/api/mobile/events", id],
+  });
 
-  if (!event) {
+  const event = data?.event;
+
+  const rsvpMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/mobile/events/${id}/rsvp`);
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/mobile/events", id] });
+      qc.invalidateQueries({ queryKey: ["/api/mobile/events"] });
+    },
+    onError: (err: Error) => {
+      const msg = err.message ?? "";
+      if (msg.includes("409") || msg.toLowerCase().includes("already")) {
+        Alert.alert("Already booked", "You've already RSVPed to this event.");
+      } else if (msg.includes("400")) {
+        Alert.alert("Booking closed", "This event is no longer accepting bookings.");
+      } else {
+        Alert.alert("Something went wrong", "Please try again.");
+      }
+    },
+  });
+
+  if (isLoading) {
     return (
-      <View style={[styles.notFound, { paddingTop: insets.top + webTopInset }]}>
+      <View style={styles.centeredState}>
         <TouchableOpacity
-          style={[styles.backButton, { top: insets.top + webTopInset + 12 }]}
+          style={[styles.backButtonAbsolute, { top: insets.top + webTopInset + 12 }]}
           onPress={() => router.back()}
         >
           <Ionicons name="chevron-back" size={22} color="#171717" />
         </TouchableOpacity>
+        <ActivityIndicator size="large" color="#171717" />
+      </View>
+    );
+  }
+
+  if (isError || !event) {
+    return (
+      <View style={styles.centeredState}>
+        <TouchableOpacity
+          style={[styles.backButtonAbsolute, { top: insets.top + webTopInset + 12 }]}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="chevron-back" size={22} color="#171717" />
+        </TouchableOpacity>
+        <Ionicons name="alert-circle-outline" size={40} color="#d4d4d4" />
         <Text style={styles.notFoundText}>Event not found</Text>
       </View>
     );
   }
 
-  const statusColor = STATUS_COLORS[event.status];
-  const isSoldOut = event.status === "SOLD OUT";
+  const canBook = event.isOpen && !event.hasRsvped && !rsvpMutation.isPending;
+  const bookingDisabled = !canBook;
 
-  const handleBook = () => {
-    if (isSoldOut) {
-      Alert.alert("Join Waitlist", "You'll be notified if a spot becomes available.");
-    } else {
-      Alert.alert("Booking confirmed", `You're booked for ${event.title}.`);
-    }
-  };
+  const statusColor = event.hasRsvped
+    ? RSVPED_COLOR
+    : event.isOpen
+    ? OPEN_COLOR
+    : CLOSED_COLOR;
+
+  const statusLabel = event.hasRsvped
+    ? "YOU'RE GOING"
+    : event.isOpen
+    ? "BOOKING OPEN"
+    : "BOOKING CLOSED";
+
+  const bookButtonLabel = rsvpMutation.isPending
+    ? "Booking..."
+    : event.hasRsvped
+    ? "You're going"
+    : "Book";
 
   return (
     <View style={styles.container}>
@@ -60,11 +118,15 @@ export default function EventDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: event.imageUrl }}
-            style={[styles.heroImage, { height: IMAGE_HEIGHT }]}
-            resizeMode="cover"
-          />
+          {event.imageData ? (
+            <Image
+              source={{ uri: event.imageData }}
+              style={[styles.heroImage, { height: IMAGE_HEIGHT }]}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.heroImage, styles.heroImagePlaceholder, { height: IMAGE_HEIGHT }]} />
+          )}
           <View
             style={[
               styles.imageOverlay,
@@ -86,56 +148,45 @@ export default function EventDetailScreen() {
 
         <View style={styles.body}>
           <Text style={styles.title}>{event.title}</Text>
-          <Text style={styles.dateLine}>
-            {event.date}, {event.time}–{event.endTime}
-          </Text>
-          <Text style={styles.venue}>{event.venue}</Text>
+          <Text style={styles.dateLine}>{formatEventDateTime(event.eventDatetime)}</Text>
+          <Text style={styles.venue}>{event.address}</Text>
 
           <View style={styles.statusRow}>
             <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
             <Text style={[styles.statusText, { color: statusColor }]}>
-              {event.status}
+              {statusLabel}
             </Text>
-          </View>
-
-          <View style={styles.priceRow}>
-            <Ionicons name="ticket-outline" size={16} color="#525252" />
-            <Text style={styles.priceText}>{event.price}</Text>
           </View>
 
           <View style={styles.divider} />
 
           <Text style={styles.sectionTitle}>Event details</Text>
-          {event.description.map((para, i) => (
-            <Text key={i} style={[styles.bodyText, i > 0 && styles.bodyTextSpaced]}>
-              {para}
-            </Text>
-          ))}
+          <Text style={styles.bodyText}>{event.description}</Text>
 
           <View style={styles.divider} />
 
-          <Text style={styles.sectionTitle}>Cancellation policy</Text>
-          <Text style={styles.bodyText}>{event.cancellationPolicy}</Text>
-
-          <View style={styles.divider} />
-
-          <TouchableOpacity style={styles.houseDetailsRow} activeOpacity={0.6}>
-            <Text style={styles.sectionTitle}>House details</Text>
-            <Ionicons name="chevron-forward" size={18} color="#171717" />
-          </TouchableOpacity>
+          <View style={styles.houseDetailsRow}>
+            <Text style={styles.sectionTitle}>Location</Text>
+          </View>
           <Text style={styles.addressText}>{event.address}</Text>
         </View>
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
         <TouchableOpacity
-          style={[styles.bookButton, isSoldOut && styles.bookButtonSoldOut]}
-          onPress={handleBook}
-          activeOpacity={0.85}
+          style={[
+            styles.bookButton,
+            bookingDisabled && styles.bookButtonDisabled,
+          ]}
+          onPress={() => !bookingDisabled && rsvpMutation.mutate()}
+          activeOpacity={bookingDisabled ? 1 : 0.85}
+          disabled={bookingDisabled}
         >
-          <Text style={styles.bookButtonText}>
-            {isSoldOut ? "Join Waitlist" : "Book"}
-          </Text>
+          {rsvpMutation.isPending ? (
+            <ActivityIndicator size="small" color="#fafafa" />
+          ) : (
+            <Text style={styles.bookButtonText}>{bookButtonLabel}</Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -147,6 +198,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#F9F9F7",
   },
+  centeredState: {
+    flex: 1,
+    backgroundColor: "#F9F9F7",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+  },
+  backButtonAbsolute: {
+    position: "absolute",
+    left: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#f0f0ee",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   scroll: {
     flex: 1,
   },
@@ -155,6 +223,9 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     width: "100%",
+  },
+  heroImagePlaceholder: {
+    backgroundColor: "#e5e5e5",
   },
   imageOverlay: {
     position: "absolute",
@@ -200,7 +271,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 14,
     color: "#525252",
-    marginBottom: 2,
+    marginBottom: 4,
   },
   venue: {
     fontFamily: "Inter_400Regular",
@@ -224,17 +295,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 0.2,
   },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
-  },
-  priceText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: "#525252",
-  },
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: "#e5e5e5",
@@ -252,14 +312,11 @@ const styles = StyleSheet.create({
     color: "#404040",
     lineHeight: 22,
   },
-  bodyTextSpaced: {
-    marginTop: 12,
-  },
   houseDetailsRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginBottom: 10,
+    marginBottom: 0,
   },
   addressText: {
     fontFamily: "Inter_400Regular",
@@ -280,19 +337,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
   },
-  bookButtonSoldOut: {
-    backgroundColor: "#525252",
+  bookButtonDisabled: {
+    backgroundColor: "#a3a3a3",
   },
   bookButtonText: {
     fontFamily: "Inter_600SemiBold",
     fontSize: 16,
     color: "#fafafa",
-  },
-  notFound: {
-    flex: 1,
-    backgroundColor: "#F9F9F7",
-    alignItems: "center",
-    justifyContent: "center",
   },
   notFoundText: {
     fontFamily: "Inter_400Regular",
