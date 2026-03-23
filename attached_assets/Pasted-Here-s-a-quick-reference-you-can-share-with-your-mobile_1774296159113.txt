@@ -1,0 +1,69 @@
+Here's a quick reference you can share with your mobile team right now, covering all the Events endpoints:
+
+Events API
+Base URL: {API_BASE_URL} (same as the rest of the mobile API)
+
+All event endpoints require a valid Authorization: Bearer <access_token> header.
+
+List Events
+GET /events
+Returns all events in chronological order.
+
+Response
+
+{
+  "events": [
+    {
+      "id": "uuid",
+      "title": "An evening with Jenevieve",
+      "eventDatetime": "2026-03-20T20:30:00.000Z",
+      "address": "180 House, London",
+      "isOpen": true,
+      "description": "Join us at 180 House for an evening with Jenevieve...",
+      "imageData": "data:image/jpeg;base64,...",
+      "category": "Music",
+      "rsvpCount": 12,
+      "hasRsvped": false,
+      "createdAt": "2026-03-01T10:00:00.000Z"
+    }
+  ]
+}
+hasRsvped is true if the authenticated user has already RSVPed.
+imageData is a base64-encoded JPEG string (or null if no image).
+
+Get Event Detail
+GET /events/:id
+Response
+
+{
+  "event": { ...same fields as above... }
+}
+Returns 404 if the event does not exist.
+
+RSVP to an Event
+POST /events/:id/rsvp
+No request body required.
+
+Success Response — 201 Created
+
+{
+  "rsvp": {
+    "id": "uuid",
+    "eventId": "uuid",
+    "userId": "uuid",
+    "email": "user@example.com",
+    "createdAt": "2026-03-20T19:00:00.000Z"
+  }
+}
+Error Responses
+
+Status	Condition
+400	"Event is not open for booking" — isOpen is false
+404	Event not found
+409	"Already RSVPed to this event" — user has already RSVPed
+Notes for the mobile app
+List view: Use GET /events to power the chronological list. Key display fields per row: imageData, category, title, eventDatetime, address, isOpen (show "BOOKING OPEN" / "BOOKING CLOSED" badge).
+Detail view: Use GET /events/:id. Same fields, but you likely want to display the full description.
+Book button: Call POST /events/:id/rsvp. Disable the button when isOpen is false or hasRsvped is true (already booked).
+Image display: imageData is a full-resolution base64 JPEG data URI — use it directly in an <Image> src. It may be null if no image was set, so handle that case.
+Datetime formatting: eventDatetime is a UTC ISO-8601 string — convert to local time for display (e.g. "Fri 20 Mar, 20:30").
