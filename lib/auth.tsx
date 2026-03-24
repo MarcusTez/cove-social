@@ -199,7 +199,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : "Your session could not be restored.";
           setAccessToken(null);
-          await removeRefreshToken();
           setSessionError(message);
           return false;
         }
