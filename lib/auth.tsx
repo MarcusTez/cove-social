@@ -13,12 +13,18 @@ import { connectSocket, disconnectSocket } from "@/lib/socket";
 
 const REFRESH_TOKEN_KEY = "cove_refresh_token";
 
+const REFRESH_RETRY_DELAYS_MS = [500, 1000, 2000];
+
 function getProxyBase(): string {
   const host = process.env.EXPO_PUBLIC_DOMAIN;
   if (!host) {
     throw new Error("EXPO_PUBLIC_DOMAIN is not set. Cannot connect to the API.");
   }
   return `https://${host}/api/mobile`;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export interface CoveUser {
@@ -62,6 +68,8 @@ interface AuthContextValue {
   user: CoveUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  sessionError: string | null;
+  clearSessionError: () => void;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -127,35 +135,50 @@ function validateMembershipStatus(user: CoveUser): void {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CoveUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+
+  const clearSessionError = useCallback(() => {
+    setSessionError(null);
+  }, []);
 
   const silentTokenRefresh = useCallback(async (): Promise<boolean> => {
     const refreshToken = await getRefreshToken();
     if (!refreshToken) return false;
 
-    try {
-      const res = await fetch(`${getProxyBase()}/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
-      });
+    for (let attempt = 0; attempt <= REFRESH_RETRY_DELAYS_MS.length; attempt++) {
+      try {
+        const res = await fetch(`${getProxyBase()}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
 
-      if (!res.ok) {
-        if (res.status === 400 || res.status === 401 || res.status === 403) {
-          await removeRefreshToken();
+        if (!res.ok) {
+          if (res.status === 400 || res.status === 401 || res.status === 403) {
+            await removeRefreshToken();
+          }
+          setAccessToken(null);
+          return false;
         }
-        setAccessToken(null);
-        return false;
-      }
 
-      const data = await res.json();
-      setAccessToken(data.accessToken);
-      await storeRefreshToken(data.refreshToken);
-      return true;
-    } catch {
-      setAccessToken(null);
-      return false;
+        const data = await res.json();
+        setAccessToken(data.accessToken);
+        await storeRefreshToken(data.refreshToken);
+        return true;
+      } catch {
+        const delay = REFRESH_RETRY_DELAYS_MS[attempt];
+        if (delay !== undefined) {
+          await sleep(delay);
+        } else {
+          setAccessToken(null);
+          return false;
+        }
+      }
     }
+
+    setAccessToken(null);
+    return false;
   }, []);
 
   const attemptRefresh = useCallback(async (): Promise<boolean> => {
@@ -173,11 +196,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         try {
           validateMembershipStatus(profileData);
-        } catch {
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : "Your session could not be restored.";
           setAccessToken(null);
+          await removeRefreshToken();
+          setSessionError(message);
           return false;
         }
 
+        setSessionError(null);
         setUser(profileData);
         connectSocket(profileData.id);
         return true;
@@ -254,6 +281,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(data.accessToken);
     await storeRefreshToken(data.refreshToken);
     queryClient.clear();
+    setSessionError(null);
     setUser(data.user);
     connectSocket(data.user.id);
   }, []);
@@ -279,6 +307,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(null);
     await removeRefreshToken();
     queryClient.clear();
+    setSessionError(null);
     setUser(null);
   }, []);
 
@@ -286,9 +315,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     isAuthenticated: !!user,
     isLoading,
+    sessionError,
+    clearSessionError,
     login,
     logout,
-  }), [user, isLoading, login, logout]);
+  }), [user, isLoading, sessionError, clearSessionError, login, logout]);
 
   return (
     <AuthContext.Provider value={value}>

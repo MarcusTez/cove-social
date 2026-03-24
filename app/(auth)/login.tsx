@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -19,11 +19,17 @@ import { useAuth } from "@/lib/auth";
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { login } = useAuth();
+  const { login, sessionError, clearSessionError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    return () => {
+      clearSessionError();
+    };
+  }, [clearSessionError]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -32,6 +38,7 @@ export default function LoginScreen() {
     }
 
     setErrorMessage("");
+    clearSessionError();
     setIsSubmitting(true);
 
     try {
@@ -46,6 +53,8 @@ export default function LoginScreen() {
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
+
+  const visibleError = sessionError || errorMessage;
 
   return (
     <KeyboardAvoidingView
@@ -68,9 +77,9 @@ export default function LoginScreen() {
           <Text style={styles.logo}>Cove</Text>
 
           <View style={styles.form}>
-            {errorMessage ? (
+            {visibleError ? (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{errorMessage}</Text>
+                <Text style={styles.errorText}>{visibleError}</Text>
               </View>
             ) : null}
 
