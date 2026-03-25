@@ -115,23 +115,6 @@ async function removeRefreshToken(): Promise<void> {
   }
 }
 
-function validateMembershipStatus(user: CoveUser): void {
-  if (user.accountStatus !== "active") {
-    throw new Error("Your account is not active. Please contact support to reactivate your account.");
-  }
-
-  if (user.subscriptionStatus !== "active" && user.subscriptionStatus !== "trialing") {
-    throw new Error("Your membership is inactive. Please renew your subscription at cove-social.com to continue.");
-  }
-
-  if (user.currentPeriodEnd) {
-    const periodEnd = new Date(user.currentPeriodEnd);
-    if (periodEnd.getTime() < Date.now()) {
-      throw new Error("Your billing period has expired. Please update your payment method at cove-social.com to continue.");
-    }
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CoveUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -193,16 +176,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profileRes.ok) {
         const profileData = await profileRes.json();
-
-        try {
-          validateMembershipStatus(profileData);
-        } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : "Your session could not be restored.";
-          setAccessToken(null);
-          setSessionError(message);
-          return false;
-        }
-
         setSessionError(null);
         setUser(profileData);
         connectSocket(profileData.id);

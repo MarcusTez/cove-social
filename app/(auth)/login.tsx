@@ -26,6 +26,7 @@ export default function LoginScreen() {
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    clearSessionError();
     return () => {
       clearSessionError();
     };
