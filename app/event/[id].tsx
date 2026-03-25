@@ -46,7 +46,7 @@ export default function EventDetailScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/mobile/events", id] });
       qc.invalidateQueries({ queryKey: ["/api/mobile/events"] });
-      Alert.alert("You're booked!", "See you there.");
+      Alert.alert("Thanks for your interest", "We'll be in touch by email.");
     },
     onError: (err: Error) => {
       const msg = err.message ?? "";
