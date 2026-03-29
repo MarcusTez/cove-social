@@ -1,0 +1,33 @@
+#10 - Push Notifications for Chat Messages
+What & Why
+Add push notifications so users are alerted when they receive a new chat message, even when the app is backgrounded or closed. This uses the Expo push notification infrastructure, which works with both iOS and Android through Expo Go.
+
+Done looks like
+On first launch (after login), the app requests permission to send push notifications
+When a user receives a new chat message and is not actively in that conversation, they receive a push notification showing the sender's name and message preview
+Tapping the notification opens the app directly to the relevant conversation
+Notifications do not fire if the recipient is already viewing that specific conversation (to avoid redundancy)
+Out of scope
+Rich notifications with images or action buttons
+Notification preferences/settings screen
+Grouping/batching multiple messages into a single notification
+Silent/background data pushes
+Tasks
+Database: push tokens table — Add a push_tokens table to shared/schema.ts (columns: userId, token, platform, createdAt/updatedAt) and run a database migration so the server can persist Expo push tokens per user. Export the Drizzle insert schema and TypeScript type.
+
+Backend: token registration endpoint — Add a POST /api/mobile/push-token route in server/chat.ts (or a new file) that accepts an Expo push token from an authenticated user and upserts it into the push_tokens table. The endpoint should replace any existing token for that user.
+
+Backend: send push notification on new message — In server/socket.ts, after a message is persisted and the conversation_updated event is dispatched to partners, look up each partner's push token from the database and send an Expo push notification using the Expo Push API (HTTP POST to https://exp.host/push/send). The notification payload should include the sender's display name as the title and a truncated message preview as the body. Include the conversationId in the notification data so the app can route to the right screen.
+
+Frontend: permission request and token registration — After the user successfully logs in, use expo-notifications to request push permission and retrieve the Expo push token. POST the token to the backend registration endpoint. Store the token request result in a context or effect that runs once per session so it isn't repeated on every render.
+
+Frontend: notification tap handler — In the root layout, register a notification response listener using expo-notifications. When the user taps a notification, read the conversationId from the notification data and navigate to app/chat/[id].tsx with that ID. Also configure a foreground notification handler so that notifications received while the app is open are shown (using setNotificationHandler).
+
+Relevant files
+shared/schema.ts
+server/chat.ts
+server/socket.ts
+server/routes.ts
+app/_layout.tsx
+app/(auth)/login.tsx
+app/chat/[id].tsx
