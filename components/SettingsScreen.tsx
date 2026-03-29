@@ -120,7 +120,7 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
     }
     setIsSubmittingForm(true);
     try {
-      const recipient = formView === "safety" ? "safety@cove-social.com" : "support@cove-social.com";
+      const recipient = "hello@cove-social.com";
       const mailtoUrl = `mailto:${recipient}?subject=${encodeURIComponent(formSubject.trim())}&body=${encodeURIComponent(formMessage.trim() + "\n\nFrom: " + formEmail.trim())}`;
       await Linking.openURL(mailtoUrl);
       Alert.alert(
