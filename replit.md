@@ -49,6 +49,7 @@ lib/
   auth.tsx              # AuthContext provider, useAuth hook, token management, socket connect/disconnect
   query-client.ts       # React Query client config, apiRequest, auth header injection
   socket.ts             # Socket.IO client, useSocket hook, generateClientMessageId
+  notifications.ts      # Expo push notification setup: permission request, token registration, foreground handler
 server/
   index.ts              # Express server entry
   config.ts             # Environment config: NODE_ENV-based dev/prod API split (DO NOT remove the dev bypass)
@@ -57,7 +58,7 @@ server/
   chat.ts               # Chat REST API handlers (conversations, messages, read receipts)
   socket.ts             # Socket.IO event handlers (real-time messaging, typing indicators)
 shared/
-  schema.ts             # Drizzle database schemas (users, conversations, conversation_participants, messages)
+  schema.ts             # Drizzle database schemas (users, conversations, conversation_participants, messages, push_tokens)
 ```
 
 ## Authentication Flow
@@ -100,6 +101,21 @@ shared/
 - Chat thread uses infinite query with cursor pagination, optimistic message sending via socket
 - Conversations created from match profile "Message" CTA via `POST /api/mobile/conversations`
 - Unread count = messages where createdAt > participant.lastReadAt AND senderId != me
+
+## Push Notifications
+
+Push notifications use Expo's push notification infrastructure (works in Expo Go, no TestFlight required).
+
+### Database
+- **push_tokens**: userId (PK), token (Expo push token string), platform (ios/android/web), createdAt, updatedAt. One row per user — upserted on each registration.
+
+### Backend
+- `POST /api/mobile/push-token` — authenticated endpoint in `server/routes.ts` → `registerPushToken` in `server/chat.ts`. Upserts the Expo push token for the authenticated user.
+- In `server/socket.ts`, after persisting a message, the server looks up each recipient's push token. If they are NOT actively in the conversation room (checked via `io.sockets.adapter.rooms` + `fetchSockets()`), it sends an Expo push notification to `https://exp.host/push/send` with the sender's display name as title, message preview as body, and `conversationId` in the notification data.
+
+### Frontend
+- `lib/notifications.ts`: Sets up the foreground notification handler (`setNotificationHandler`), requests permission, fetches the Expo push token, and POSTs it to the backend. Silently skipped on web or simulator.
+- `app/_layout.tsx` (`RootLayoutNav`): Registers push token once per session when `isAuthenticated` becomes true. Registers a `addNotificationResponseReceivedListener` that reads `conversationId` from tapped notification data and navigates to `app/chat/[id].tsx`.
 
 ## Dev/Prod API Environment Split
 

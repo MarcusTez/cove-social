@@ -14,7 +14,8 @@ import {
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect, useState, useCallback } from "react";
+import * as Notifications from "expo-notifications";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { View, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
@@ -23,6 +24,7 @@ import { queryClient } from "@/lib/query-client";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CoveSplash } from "@/components/CoveSplash";
 import LineLoader from "@/components/LineLoader";
+import { registerForPushNotifications } from "@/lib/notifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -47,6 +49,8 @@ function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+  const pushRegisteredRef = useRef(false);
+  const notificationListenerRef = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
     if (isLoading) return;
@@ -55,10 +59,31 @@ function RootLayoutNav() {
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/login");
+      pushRegisteredRef.current = false;
     } else if (isAuthenticated && inAuthGroup) {
       router.replace("/(tabs)");
     }
   }, [isAuthenticated, isLoading, segments]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (pushRegisteredRef.current) return;
+    pushRegisteredRef.current = true;
+    registerForPushNotifications();
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    notificationListenerRef.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      const conversationId = response.notification.request.content.data?.conversationId as string | undefined;
+      if (conversationId) {
+        router.push(`/chat/${conversationId}`);
+      }
+    });
+
+    return () => {
+      notificationListenerRef.current?.remove();
+    };
+  }, [router]);
 
   if (isLoading) {
     return <AuthLoadingScreen />;

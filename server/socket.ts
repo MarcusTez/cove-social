@@ -1,9 +1,24 @@
 import { Server as HttpServer } from "node:http";
 import { Server, Socket } from "socket.io";
 import { db } from "./db";
-import { conversations, conversationParticipants, messages } from "../shared/schema";
+import { conversations, conversationParticipants, messages, pushTokens } from "../shared/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { validateTokenAndGetUserId } from "./chat";
+
+async function sendExpoPushNotification(token: string, title: string, body: string, data: Record<string, string>) {
+  try {
+    await fetch("https://exp.host/push/send", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ to: token, title, body, data, sound: "default" }),
+    });
+  } catch (err) {
+    console.error("Failed to send Expo push notification:", err);
+  }
+}
 
 let io: Server | null = null;
 
@@ -146,6 +161,17 @@ export function setupSocketIO(httpServer: HttpServer, allowedOrigins: Set<string
 
         socket.to(`conversation:${conversationId}`).emit("new_message", messagePayload);
 
+        const [senderParticipant] = await db
+          .select()
+          .from(conversationParticipants)
+          .where(
+            and(
+              eq(conversationParticipants.conversationId, conversationId),
+              eq(conversationParticipants.userId, userId)
+            )
+          );
+        const senderName = senderParticipant?.displayName ?? "Someone";
+
         const partners = await db
           .select()
           .from(conversationParticipants)
@@ -165,6 +191,29 @@ export function setupSocketIO(httpServer: HttpServer, allowedOrigins: Set<string
               createdAt: msg.createdAt.toISOString(),
             },
           });
+
+          const conversationRoom = io!.sockets.adapter.rooms.get(`conversation:${conversationId}`);
+          const partnerSockets = await io!.in(`user:${partner.userId}`).fetchSockets();
+          const partnerInRoom = partnerSockets.some((s) =>
+            conversationRoom?.has(s.id)
+          );
+
+          if (!partnerInRoom) {
+            const [tokenRow] = await db
+              .select()
+              .from(pushTokens)
+              .where(eq(pushTokens.userId, partner.userId));
+
+            if (tokenRow?.token) {
+              const preview = msg.content.length > 100 ? msg.content.slice(0, 97) + "..." : msg.content;
+              await sendExpoPushNotification(
+                tokenRow.token,
+                senderName,
+                preview,
+                { conversationId }
+              );
+            }
+          }
         }
       } catch (error) {
         console.error("Error handling send_message:", error);

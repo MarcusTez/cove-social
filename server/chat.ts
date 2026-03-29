@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { db } from "./db";
-import { conversations, conversationParticipants, messages } from "../shared/schema";
+import { conversations, conversationParticipants, messages, pushTokens } from "../shared/schema";
 import { eq, and, desc, lt, ne, sql } from "drizzle-orm";
 import { COVE_API_BASE } from "./config";
 
@@ -466,5 +466,35 @@ export async function markConversationRead(req: Request, res: Response) {
   } catch (error) {
     console.error("Error marking read:", error);
     res.status(500).json({ error: "Failed to mark as read" });
+  }
+}
+
+export async function registerPushToken(req: Request, res: Response) {
+  try {
+    const userId = await validateTokenAndGetUserId(req.headers.authorization);
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { token, platform } = req.body;
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({ error: "token is required" });
+    }
+    if (!["ios", "android", "web"].includes(platform)) {
+      return res.status(400).json({ error: "platform must be ios, android, or web" });
+    }
+
+    await db
+      .insert(pushTokens)
+      .values({ userId, token, platform })
+      .onConflictDoUpdate({
+        target: pushTokens.userId,
+        set: { token, platform, updatedAt: new Date() },
+      });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error registering push token:", error);
+    res.status(500).json({ error: "Failed to register push token" });
   }
 }

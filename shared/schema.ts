@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, primaryKey, uniqueIndex, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, primaryKey, uniqueIndex, index, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -70,6 +70,24 @@ export const messages = pgTable(
     ),
   ]
 );
+
+export const pushTokenPlatformEnum = pgEnum("push_token_platform", ["ios", "android", "web"]);
+
+export const pushTokens = pgTable("push_tokens", {
+  userId: varchar("user_id").primaryKey(),
+  token: text("token").notNull(),
+  platform: pushTokenPlatformEnum("platform").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPushTokenSchema = createInsertSchema(pushTokens).pick({
+  token: true,
+  platform: true,
+});
+
+export type PushToken = typeof pushTokens.$inferSelect;
+export type InsertPushToken = z.infer<typeof insertPushTokenSchema>;
 
 export const insertConversationSchema = createInsertSchema(conversations).pick({
   matchId: true,

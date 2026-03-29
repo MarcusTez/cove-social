@@ -28,6 +28,7 @@ import {
   sendMessage,
   markConversationRead,
   deleteConversation,
+  registerPushToken,
 } from "./chat";
 import { setupSocketIO } from "./socket";
 import { COVE_API_BASE } from "./config";
@@ -99,6 +100,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/mobile/events", proxyToCove);
   app.get("/api/mobile/events/:id", proxyToCove);
   app.post("/api/mobile/events/:id/rsvp", proxyToCove);
+
+  app.post("/api/mobile/push-token", registerPushToken);
 
   app.get("/api/mobile/conversations", getConversations);
   app.post("/api/mobile/conversations", createConversation);
