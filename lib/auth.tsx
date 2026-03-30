@@ -120,48 +120,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const pendingRefreshRef = useRef<Promise<boolean> | null>(null);
 
   const clearSessionError = useCallback(() => {
     setSessionError(null);
   }, []);
 
   const silentTokenRefresh = useCallback(async (): Promise<boolean> => {
-    const refreshToken = await getRefreshToken();
-    if (!refreshToken) return false;
+    if (pendingRefreshRef.current) return pendingRefreshRef.current;
 
-    for (let attempt = 0; attempt <= REFRESH_RETRY_DELAYS_MS.length; attempt++) {
-      try {
-        const res = await fetch(`${getProxyBase()}/auth/refresh`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ refreshToken }),
-        });
+    const doRefresh = async (): Promise<boolean> => {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) return false;
 
-        if (!res.ok) {
-          if (res.status === 400 || res.status === 401 || res.status === 403) {
-            await removeRefreshToken();
+      for (let attempt = 0; attempt <= REFRESH_RETRY_DELAYS_MS.length; attempt++) {
+        try {
+          const res = await fetch(`${getProxyBase()}/auth/refresh`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refreshToken }),
+          });
+
+          if (!res.ok) {
+            if (res.status === 400 || res.status === 401 || res.status === 403) {
+              await removeRefreshToken();
+            }
+            setAccessToken(null);
+            return false;
           }
-          setAccessToken(null);
-          return false;
-        }
 
-        const data = await res.json();
-        setAccessToken(data.accessToken);
-        await storeRefreshToken(data.refreshToken);
-        return true;
-      } catch {
-        const delay = REFRESH_RETRY_DELAYS_MS[attempt];
-        if (delay !== undefined) {
-          await sleep(delay);
-        } else {
-          setAccessToken(null);
-          return false;
+          const data = await res.json();
+          setAccessToken(data.accessToken);
+          await storeRefreshToken(data.refreshToken);
+          return true;
+        } catch {
+          const delay = REFRESH_RETRY_DELAYS_MS[attempt];
+          if (delay !== undefined) {
+            await sleep(delay);
+          } else {
+            setAccessToken(null);
+            return false;
+          }
         }
       }
-    }
 
-    setAccessToken(null);
-    return false;
+      setAccessToken(null);
+      return false;
+    };
+
+    pendingRefreshRef.current = doRefresh().finally(() => {
+      pendingRefreshRef.current = null;
+    });
+    return pendingRefreshRef.current;
   }, []);
 
   const attemptRefresh = useCallback(async (): Promise<boolean> => {
