@@ -246,7 +246,7 @@ export default function RegisterScreen() {
             </View>
           </View>
         </View>
-        <Text style={styles.versionText}>v1.0.4</Text>
+        <Text style={styles.versionText}>v1.1.2</Text>
       </ScrollView>
 
       <Modal
