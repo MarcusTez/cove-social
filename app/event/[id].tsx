@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/query-client";
-import { formatEventDateTime, type ApiEventResponse } from "@/lib/api-events";
+import { formatEventDateTime, type ApiEventResponse, type RsvpStatus } from "@/lib/api-events";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const IMAGE_HEIGHT = SCREEN_WIDTH * 0.85;
@@ -89,26 +89,52 @@ export default function EventDetailScreen() {
     );
   }
 
-  const canBook = event.isOpen && !event.hasRsvped && !rsvpMutation.isPending;
+  const rsvpStatus: RsvpStatus = event.rsvpStatus ?? null;
+  const hasRsvped = rsvpStatus !== null;
+
+  const canBook = event.isOpen && !hasRsvped && !rsvpMutation.isPending;
   const bookingDisabled = !canBook;
 
-  const statusColor = event.hasRsvped
-    ? RSVPED_COLOR
-    : event.isOpen
-    ? OPEN_COLOR
-    : CLOSED_COLOR;
+  const statusColor =
+    rsvpStatus === "confirmed"
+      ? OPEN_COLOR
+      : rsvpStatus === "declined"
+      ? CLOSED_COLOR
+      : rsvpStatus === "pending"
+      ? RSVPED_COLOR
+      : event.isOpen
+      ? OPEN_COLOR
+      : CLOSED_COLOR;
 
-  const statusLabel = event.hasRsvped
-    ? "REQUESTED"
-    : event.isOpen
-    ? "BOOKING OPEN"
-    : "BOOKING CLOSED";
+  const statusLabel =
+    rsvpStatus === "confirmed"
+      ? "CONFIRMED"
+      : rsvpStatus === "declined"
+      ? "DECLINED"
+      : rsvpStatus === "pending"
+      ? "PENDING APPROVAL"
+      : event.isOpen
+      ? "BOOKING OPEN"
+      : "BOOKING CLOSED";
 
   const bookButtonLabel = rsvpMutation.isPending
     ? "Requesting..."
-    : event.hasRsvped
+    : rsvpStatus === "confirmed"
+    ? "Confirmed"
+    : rsvpStatus === "declined"
+    ? "Declined"
+    : rsvpStatus === "pending"
     ? "Requested"
     : "Request";
+
+  const footerHint =
+    rsvpStatus === "confirmed"
+      ? "You're confirmed for this event."
+      : rsvpStatus === "declined"
+      ? "Your request was not approved this time."
+      : rsvpStatus === "pending"
+      ? "Thanks for your interest, we'll confirm by email."
+      : null;
 
   return (
     <View style={styles.container}>
@@ -175,10 +201,8 @@ export default function EventDetailScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        {event.hasRsvped && (
-          <Text style={styles.requestedHint}>
-            Thanks for your interest, we'll confirm by email.
-          </Text>
+        {footerHint && (
+          <Text style={styles.requestedHint}>{footerHint}</Text>
         )}
         <TouchableOpacity
           style={[

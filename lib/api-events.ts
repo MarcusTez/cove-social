@@ -1,3 +1,5 @@
+export type RsvpStatus = "pending" | "confirmed" | "declined" | null;
+
 export interface ApiEvent {
   id: string;
   title: string;
@@ -9,6 +11,7 @@ export interface ApiEvent {
   category: string;
   rsvpCount: number;
   hasRsvped: boolean;
+  rsvpStatus: RsvpStatus;
   createdAt: string;
 }
 
