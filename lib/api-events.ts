@@ -12,6 +12,7 @@ export interface ApiEvent {
   rsvpCount: number;
   hasRsvped: boolean;
   rsvpStatus: RsvpStatus;
+  confirmedDetails: string | null;
   createdAt: string;
 }
 

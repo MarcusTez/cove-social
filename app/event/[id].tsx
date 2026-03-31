@@ -120,7 +120,7 @@ export default function EventDetailScreen() {
   const bookButtonLabel = rsvpMutation.isPending
     ? "Requesting..."
     : rsvpStatus === "confirmed"
-    ? "Confirmed"
+    ? "You're going"
     : rsvpStatus === "declined"
     ? "Declined"
     : rsvpStatus === "pending"
@@ -190,6 +190,14 @@ export default function EventDetailScreen() {
 
           <Text style={styles.sectionTitle}>Event details</Text>
           <Text style={styles.bodyText}>{event.description}</Text>
+
+          {rsvpStatus === "confirmed" && event.confirmedDetails ? (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.sectionTitle}>You're going</Text>
+              <Text style={styles.bodyText}>{event.confirmedDetails}</Text>
+            </>
+          ) : null}
 
           <View style={styles.divider} />
 
