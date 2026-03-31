@@ -63,8 +63,9 @@ function NativeTabLayout() {
       <NativeTabs.Trigger
         name="chat"
         options={{
-          badgeValue: hasUnread ? " " : undefined,
+          badgeValue: hasUnread ? "" : undefined,
           badgeBackgroundColor: "#171717",
+          selectedBadgeBackgroundColor: "#171717",
         }}
       >
         <Icon sf={{ default: "bubble.left", selected: "bubble.left.fill" }} />
