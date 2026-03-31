@@ -32,6 +32,7 @@ export default function EventDetailScreen() {
   const insets = useSafeAreaInsets();
 
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [rsvpError, setRsvpError] = useState<string | null>(null);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -52,22 +53,22 @@ export default function EventDetailScreen() {
 
   const rsvpMutation = useMutation({
     mutationFn: async () => {
+      setRsvpError(null);
       const res = await apiRequest("POST", `/api/mobile/events/${id}/rsvp`);
       return res.json();
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/mobile/events", id] });
       qc.invalidateQueries({ queryKey: ["/api/mobile/events"] });
-      Alert.alert("Thanks for your interest", "We'll be in touch by email.");
     },
     onError: (err: Error) => {
       const msg = err.message ?? "";
-      if (msg.includes("409") || msg.toLowerCase().includes("already")) {
-        Alert.alert("Already booked", "You've already RSVPed to this event.");
+      if (msg.includes("409")) {
+        setRsvpError("You've already requested this event — contact us if you'd like to rebook.");
       } else if (msg.includes("400")) {
-        Alert.alert("Booking closed", "This event is no longer accepting bookings.");
+        setRsvpError("Bookings for this event are now closed.");
       } else {
-        Alert.alert("Something went wrong", "Please try again.");
+        setRsvpError("Something went wrong. Please try again.");
       }
     },
   });
@@ -242,6 +243,9 @@ export default function EventDetailScreen() {
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
         {footerHint && (
           <Text style={styles.requestedHint}>{footerHint}</Text>
+        )}
+        {rsvpError && (
+          <Text style={styles.rsvpErrorText}>{rsvpError}</Text>
         )}
         <TouchableOpacity
           style={[
@@ -469,6 +473,13 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     fontSize: 12,
     color: "#a3a3a3",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  rsvpErrorText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "#dc2626",
     textAlign: "center",
     marginBottom: 8,
   },
