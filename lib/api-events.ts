@@ -1,4 +1,4 @@
-export type RsvpStatus = "pending" | "confirmed" | "declined" | null;
+export type RsvpStatus = "pending" | "confirmed" | "declined" | "cancelled" | null;
 
 export interface ApiEvent {
   id: string;

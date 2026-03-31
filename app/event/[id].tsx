@@ -118,7 +118,10 @@ export default function EventDetailScreen() {
   }
 
   const rsvpStatus: RsvpStatus = event.rsvpStatus ?? null;
-  const hasRsvped = rsvpStatus !== null;
+  const hasRsvped =
+    rsvpStatus === "pending" ||
+    rsvpStatus === "confirmed" ||
+    rsvpStatus === "declined";
 
   const canBook = event.isOpen && !hasRsvped && !rsvpMutation.isPending;
   const bookingDisabled = !canBook;
