@@ -64,7 +64,7 @@ export default function EventDetailScreen() {
     onError: (err: Error) => {
       const msg = err.message ?? "";
       if (msg.includes("409")) {
-        setRsvpError("You've already requested this event — contact us if you'd like to rebook.");
+        setRsvpError("You've already requested this event.");
       } else if (msg.includes("400")) {
         setRsvpError("Bookings for this event are now closed.");
       } else {
