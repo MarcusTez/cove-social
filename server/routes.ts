@@ -100,6 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/mobile/events", proxyToCove);
   app.get("/api/mobile/events/:id", proxyToCove);
   app.post("/api/mobile/events/:id/rsvp", proxyToCove);
+  app.delete("/api/mobile/events/:id/rsvp", proxyToCove);
 
   app.post("/api/mobile/push-token", registerPushToken);
 
