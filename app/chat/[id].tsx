@@ -51,10 +51,8 @@ interface ConversationData {
   createdAt: string;
 }
 
-const COMPOSER_PADDING_V = 10;
-const COMPOSER_LINE_HEIGHT = 22;
-const MIN_INPUT_HEIGHT = COMPOSER_LINE_HEIGHT + COMPOSER_PADDING_V * 2;
-const MAX_INPUT_HEIGHT = COMPOSER_LINE_HEIGHT * 5 + COMPOSER_PADDING_V * 2;
+const COMPOSER_MIN_HEIGHT = 42;
+const COMPOSER_MAX_HEIGHT = 120;
 
 function formatTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -130,8 +128,6 @@ export default function ChatThreadScreen() {
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
 
-  const [inputHeight, setInputHeight] = useState(MIN_INPUT_HEIGHT);
-
   const { data: conversationsData } = useQuery<ConversationData[]>({
     queryKey: ["/api/mobile/conversations"],
   });
@@ -170,9 +166,7 @@ export default function ChatThreadScreen() {
       seen.set(msg.clientMessageId, msg);
     }
     for (const msg of serverMessages) {
-      if (!seen.has(msg.clientMessageId)) {
-        seen.set(msg.clientMessageId, msg);
-      }
+      seen.set(msg.clientMessageId, msg);
     }
     return Array.from(seen.values()).sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -253,20 +247,6 @@ export default function ChatThreadScreen() {
     });
   }, [id]);
 
-  const handleContentSizeChange = useCallback(
-    (e: { nativeEvent: { contentSize: { height: number } } }) => {
-      const contentH = e.nativeEvent.contentSize.height;
-      const newHeight =
-        Platform.OS === "android"
-          ? contentH
-          : contentH + COMPOSER_PADDING_V * 2;
-      setInputHeight(
-        Math.max(MIN_INPUT_HEIGHT, Math.min(newHeight, MAX_INPUT_HEIGHT))
-      );
-    },
-    []
-  );
-
   const handleSend = useCallback(() => {
     if (!messageText.trim() || !socket || !id || !user) return;
 
@@ -274,7 +254,6 @@ export default function ChatThreadScreen() {
     const clientMessageId = generateClientMessageId();
 
     setMessageText("");
-    setInputHeight(MIN_INPUT_HEIGHT);
 
     const optimisticMessage: MessageItem = {
       id: clientMessageId,
@@ -582,14 +561,12 @@ export default function ChatThreadScreen() {
           ]}
         >
           <TextInput
-            style={[styles.composerInput, { height: inputHeight }]}
+            style={styles.composerInput}
             value={messageText}
             onChangeText={handleTextChange}
             placeholder="Message..."
             placeholderTextColor="#a3a3a3"
             multiline={true}
-            scrollEnabled={inputHeight >= MAX_INPUT_HEIGHT}
-            onContentSizeChange={handleContentSizeChange}
             testID="message-input"
           />
           <TouchableOpacity
@@ -865,6 +842,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: "Inter_400Regular",
     fontSize: 15,
+    lineHeight: 22,
     color: "#171717",
     backgroundColor: "#f5f5f5",
     borderWidth: 1,
@@ -872,6 +850,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 10,
+    minHeight: COMPOSER_MIN_HEIGHT,
+    maxHeight: COMPOSER_MAX_HEIGHT,
   },
   sendButton: {
     width: 40,
