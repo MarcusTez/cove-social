@@ -489,7 +489,8 @@ export default function ChatThreadScreen() {
             onChangeText={handleTextChange}
             placeholder="Message..."
             placeholderTextColor="#a3a3a3"
-            multiline={false}
+            multiline={true}
+            scrollEnabled={true}
             testID="message-input"
           />
           <TouchableOpacity
@@ -715,7 +716,7 @@ const styles = StyleSheet.create({
   },
   composer: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-end",
     paddingHorizontal: 16,
     paddingTop: 10,
     backgroundColor: "#ffffff",
@@ -734,6 +735,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 10,
+    maxHeight: 130,
   },
   sendButton: {
     width: 40,
