@@ -38,7 +38,8 @@ export async function registerForPushNotifications(): Promise<string | null> {
   try {
     const projectId =
       Constants.expoConfig?.extra?.eas?.projectId ??
-      Constants.easConfig?.projectId;
+      Constants.easConfig?.projectId ??
+      "2c697850-0d15-44f6-ac79-8ff5be93b9e3";
     const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
     const token = tokenData.data;
 
@@ -52,7 +53,8 @@ export async function registerForPushNotifications(): Promise<string | null> {
 
     return token;
   } catch (error) {
-    console.error("Failed to register push token:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Failed to register push token:", message, error);
     return null;
   }
 }
