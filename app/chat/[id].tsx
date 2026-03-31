@@ -178,6 +178,17 @@ export default function ChatThreadScreen() {
 
     socket.emit("join_conversation", id);
 
+    const handleReconnect = () => {
+      socket.emit("join_conversation", id);
+    };
+
+    const handleMessageError = (err: { clientMessageId: string; error: string }) => {
+      setLocalMessages((prev) =>
+        prev.filter((m) => m.clientMessageId !== err.clientMessageId)
+      );
+      Alert.alert("Message failed", "Your message could not be sent. Please try again.");
+    };
+
     const handleNewMessage = (msg: MessageItem) => {
       if (msg.conversationId !== id) return;
 
@@ -222,15 +233,19 @@ export default function ChatThreadScreen() {
       }
     };
 
+    socket.on("connect", handleReconnect);
     socket.on("new_message", handleNewMessage);
     socket.on("message:ack", handleMessageAck);
+    socket.on("message:error", handleMessageError);
     socket.on("typing", handleTyping);
     socket.on("stop_typing", handleStopTyping);
 
     return () => {
       socket.emit("leave_conversation", id);
+      socket.off("connect", handleReconnect);
       socket.off("new_message", handleNewMessage);
       socket.off("message:ack", handleMessageAck);
+      socket.off("message:error", handleMessageError);
       socket.off("typing", handleTyping);
       socket.off("stop_typing", handleStopTyping);
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);

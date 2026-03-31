@@ -15,10 +15,12 @@ export function connectSocket(userId: string): Socket {
   socketInstance = io(baseUrl, {
     path: "/socket.io",
     auth: { token },
-    transports: ["websocket", "polling"],
+    transports: ["polling", "websocket"],
+    upgrade: true,
     reconnection: true,
-    reconnectionAttempts: 10,
+    reconnectionAttempts: 20,
     reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
   });
 
   socketInstance.on("connect", () => {
