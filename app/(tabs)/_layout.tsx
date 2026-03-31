@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 function useHasUnread(): boolean {
   const { data } = useQuery<{ unreadCount: number }[]>({
     queryKey: ["/api/mobile/conversations"],
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
   return (data ?? []).some((c) => c.unreadCount > 0);
 }
@@ -52,13 +52,22 @@ function ChatIconWithDot({
 }
 
 function NativeTabLayout() {
+  const hasUnread = useHasUnread();
+
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>Home</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="chat">
+      <NativeTabs.Trigger
+        name="chat"
+        options={
+          hasUnread
+            ? { badgeValue: "", badgeBackgroundColor: "#171717" }
+            : undefined
+        }
+      >
         <Icon sf={{ default: "bubble.left", selected: "bubble.left.fill" }} />
         <Label>Chat</Label>
       </NativeTabs.Trigger>
