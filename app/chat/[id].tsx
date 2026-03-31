@@ -51,6 +51,11 @@ interface ConversationData {
   createdAt: string;
 }
 
+const COMPOSER_PADDING_V = 10;
+const COMPOSER_LINE_HEIGHT = 22;
+const MIN_INPUT_HEIGHT = COMPOSER_LINE_HEIGHT + COMPOSER_PADDING_V * 2;
+const MAX_INPUT_HEIGHT = COMPOSER_LINE_HEIGHT * 5 + COMPOSER_PADDING_V * 2;
+
 function formatTime(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -116,6 +121,8 @@ export default function ChatThreadScreen() {
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const webBottomInset = Platform.OS === "web" ? 34 : 0;
+
+  const [inputHeight, setInputHeight] = useState(MIN_INPUT_HEIGHT);
 
   const { data: conversationsData } = useQuery<ConversationData[]>({
     queryKey: ["/api/mobile/conversations"],
@@ -238,6 +245,20 @@ export default function ChatThreadScreen() {
     });
   }, [id]);
 
+  const handleContentSizeChange = useCallback(
+    (e: { nativeEvent: { contentSize: { height: number } } }) => {
+      const contentH = e.nativeEvent.contentSize.height;
+      const newHeight =
+        Platform.OS === "android"
+          ? contentH
+          : contentH + COMPOSER_PADDING_V * 2;
+      setInputHeight(
+        Math.max(MIN_INPUT_HEIGHT, Math.min(newHeight, MAX_INPUT_HEIGHT))
+      );
+    },
+    []
+  );
+
   const handleSend = useCallback(() => {
     if (!messageText.trim() || !socket || !id || !user) return;
 
@@ -245,6 +266,7 @@ export default function ChatThreadScreen() {
     const clientMessageId = generateClientMessageId();
 
     setMessageText("");
+    setInputHeight(MIN_INPUT_HEIGHT);
 
     const optimisticMessage: MessageItem = {
       id: clientMessageId,
@@ -484,13 +506,14 @@ export default function ChatThreadScreen() {
           ]}
         >
           <TextInput
-            style={styles.composerInput}
+            style={[styles.composerInput, { height: inputHeight }]}
             value={messageText}
             onChangeText={handleTextChange}
             placeholder="Message..."
             placeholderTextColor="#a3a3a3"
             multiline={true}
-            scrollEnabled={true}
+            scrollEnabled={inputHeight >= MAX_INPUT_HEIGHT}
+            onContentSizeChange={handleContentSizeChange}
             testID="message-input"
           />
           <TouchableOpacity
@@ -735,7 +758,6 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    maxHeight: 130,
   },
   sendButton: {
     width: 40,
