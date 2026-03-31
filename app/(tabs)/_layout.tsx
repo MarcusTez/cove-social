@@ -1,6 +1,6 @@
 import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
-import { NativeTabs, Icon, Label } from "expo-router/unstable-native-tabs";
+import { NativeTabs, Icon, Label, Badge } from "expo-router/unstable-native-tabs";
 import { BlurView } from "expo-blur";
 import { Platform, StyleSheet, useColorScheme, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -51,50 +51,19 @@ function ChatIconWithDot({
   );
 }
 
-function ChatDotIcon({ focused, hasUnread }: { focused: boolean; hasUnread: boolean }) {
-  return (
-    <View style={{ width: 30, height: 30, alignItems: "center", justifyContent: "center" }}>
-      <Ionicons
-        name={focused ? "chatbubble" : "chatbubble-outline"}
-        size={25}
-        color={focused ? "#007AFF" : "#8E8E93"}
-      />
-      {hasUnread && (
-        <View
-          style={{
-            position: "absolute",
-            top: 2,
-            right: 2,
-            width: 6,
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: "#171717",
-            borderWidth: 1,
-            borderColor: "#ffffff",
-          }}
-        />
-      )}
-    </View>
-  );
-}
-
 function NativeTabLayout() {
   const hasUnread = useHasUnread();
 
   return (
-    <NativeTabs>
+    <NativeTabs badgeBackgroundColor="#171717">
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>Home</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="chat">
-        <Icon
-          src={{
-            default: <ChatDotIcon focused={false} hasUnread={hasUnread} />,
-            selected: <ChatDotIcon focused={true} hasUnread={hasUnread} />,
-          }}
-        />
+        <Icon sf={{ default: "bubble.left", selected: "bubble.left.fill" }} />
         <Label>Chat</Label>
+        <Badge hidden={!hasUnread}>{" "}</Badge>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="events">
         <Icon sf={{ default: "calendar", selected: "calendar" }} />
