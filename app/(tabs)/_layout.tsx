@@ -63,7 +63,7 @@ function NativeTabLayout() {
       <NativeTabs.Trigger
         name="chat"
         options={{
-          badgeValue: hasUnread ? "" : undefined,
+          badgeValue: hasUnread ? " " : undefined,
           badgeBackgroundColor: "#171717",
           selectedBadgeBackgroundColor: "#171717",
         }}
