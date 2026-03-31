@@ -86,3 +86,7 @@ ensurePreviewReachable = "/status"
 EXPO_PUBLIC_COVE_API_URL = "https://e4af2c56-d31e-4016-b6f4-4605cbfaf1bf-00-9jq2nkbugewe.worf.replit.dev/api/mobile"
 
 [userenv.production]
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 60000
