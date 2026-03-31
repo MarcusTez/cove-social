@@ -191,6 +191,13 @@ export default function EventDetailScreen() {
           <Text style={styles.sectionTitle}>Event details</Text>
           <Text style={styles.bodyText}>{event.description}</Text>
 
+          <View style={styles.divider} />
+
+          <View style={styles.houseDetailsRow}>
+            <Text style={styles.sectionTitle}>Location</Text>
+          </View>
+          <Text style={styles.addressText}>{event.address}</Text>
+
           {rsvpStatus === "confirmed" && event.confirmedDetails !== null ? (
             <>
               <View style={styles.divider} />
@@ -198,13 +205,6 @@ export default function EventDetailScreen() {
               <Text style={styles.bodyText}>{event.confirmedDetails}</Text>
             </>
           ) : null}
-
-          <View style={styles.divider} />
-
-          <View style={styles.houseDetailsRow}>
-            <Text style={styles.sectionTitle}>Location</Text>
-          </View>
-          <Text style={styles.addressText}>{event.address}</Text>
         </View>
       </ScrollView>
 

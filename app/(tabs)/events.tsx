@@ -17,24 +17,38 @@ import {
   formatEventDateTime,
   type ApiEvent,
   type ApiEventsResponse,
+  type RsvpStatus,
 } from "@/lib/api-events";
 
 const OPEN_COLOR = "#22c55e";
 const CLOSED_COLOR = "#737373";
 const RSVPED_COLOR = "#6366f1";
+const CONFIRMED_COLOR = "#22c55e";
 
 function EventCard({ event, onPress }: { event: ApiEvent; onPress: () => void }) {
-  const statusColor = event.hasRsvped
-    ? RSVPED_COLOR
-    : event.isOpen
-    ? OPEN_COLOR
-    : CLOSED_COLOR;
+  const rsvpStatus: RsvpStatus = event.rsvpStatus ?? null;
 
-  const statusLabel = event.hasRsvped
-    ? "REQUESTED"
-    : event.isOpen
-    ? "BOOKING OPEN"
-    : "BOOKING CLOSED";
+  const statusColor =
+    rsvpStatus === "confirmed"
+      ? CONFIRMED_COLOR
+      : rsvpStatus === "declined"
+      ? CLOSED_COLOR
+      : rsvpStatus === "pending"
+      ? RSVPED_COLOR
+      : event.isOpen
+      ? OPEN_COLOR
+      : CLOSED_COLOR;
+
+  const statusLabel =
+    rsvpStatus === "confirmed"
+      ? "CONFIRMED"
+      : rsvpStatus === "declined"
+      ? "DECLINED"
+      : rsvpStatus === "pending"
+      ? "REQUESTED"
+      : event.isOpen
+      ? "BOOKING OPEN"
+      : "BOOKING CLOSED";
 
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={onPress}>
