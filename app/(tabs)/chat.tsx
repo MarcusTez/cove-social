@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -127,15 +127,21 @@ export default function ChatScreen() {
   const router = useRouter();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const socket = useSocket();
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
 
   const {
     data: conversations,
     isLoading,
     refetch,
-    isRefetching,
   } = useQuery<ConversationItem[]>({
     queryKey: ["/api/mobile/conversations"],
   });
+
+  const handleManualRefresh = useCallback(async () => {
+    setIsManualRefreshing(true);
+    await refetch();
+    setIsManualRefreshing(false);
+  }, [refetch]);
 
   useEffect(() => {
     if (!socket) return;
@@ -190,7 +196,7 @@ export default function ChatScreen() {
           contentContainerStyle={{ paddingBottom: 100 }}
           scrollEnabled={conversations.length > 0}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+            <RefreshControl refreshing={isManualRefreshing} onRefresh={handleManualRefresh} />
           }
         />
       )}
