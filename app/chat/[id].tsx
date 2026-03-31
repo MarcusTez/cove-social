@@ -64,12 +64,18 @@ function formatTime(dateStr: string): string {
 const MessageBubble = memo(function MessageBubble({
   message,
   isMe,
+  isSelected,
+  onLongPress,
 }: {
   message: MessageItem;
   isMe: boolean;
+  isSelected: boolean;
+  onLongPress: () => void;
 }) {
   return (
-    <View
+    <Pressable
+      onLongPress={isMe && !message.pending ? onLongPress : undefined}
+      delayLongPress={1000}
       style={[
         styles.bubbleRow,
         isMe ? styles.bubbleRowMe : styles.bubbleRowThem,
@@ -80,6 +86,7 @@ const MessageBubble = memo(function MessageBubble({
           styles.bubble,
           isMe ? styles.bubbleMe : styles.bubbleThem,
           message.pending && styles.bubblePending,
+          isSelected && isMe && styles.bubbleSelected,
         ]}
       >
         <Text
@@ -99,7 +106,7 @@ const MessageBubble = memo(function MessageBubble({
           {message.pending ? "Sending..." : formatTime(message.createdAt)}
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 });
 
@@ -116,6 +123,7 @@ export default function ChatThreadScreen() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [localMessages, setLocalMessages] = useState<MessageItem[]>([]);
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<MessageItem | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
@@ -289,11 +297,59 @@ export default function ChatThreadScreen() {
     socket.emit("stop_typing", id);
   }, [messageText, socket, id, user]);
 
+  const handleLongPress = useCallback(
+    (message: MessageItem) => {
+      setSelectedMessage(message);
+    },
+    []
+  );
+
+  const handleDeleteMessage = useCallback(() => {
+    if (!selectedMessage || !id) return;
+    const toDelete = selectedMessage;
+    setSelectedMessage(null);
+    Alert.alert(
+      "Delete message?",
+      "This message will be permanently deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setLocalMessages((prev) =>
+              prev.filter((m) => m.clientMessageId !== toDelete.clientMessageId)
+            );
+            try {
+              await apiRequest(
+                "DELETE",
+                `/api/mobile/conversations/${id}/messages/${toDelete.id}`
+              );
+              queryClient.invalidateQueries({
+                queryKey: ["/api/mobile/conversations", id, "messages"],
+              });
+              queryClient.invalidateQueries({
+                queryKey: ["/api/mobile/conversations"],
+              });
+            } catch {
+              Alert.alert("Error", "Failed to delete message. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  }, [selectedMessage, id]);
+
   const renderItem = useCallback(
     ({ item }: { item: MessageItem }) => (
-      <MessageBubble message={item} isMe={item.senderId === user?.id} />
+      <MessageBubble
+        message={item}
+        isMe={item.senderId === user?.id}
+        isSelected={selectedMessage?.clientMessageId === item.clientMessageId}
+        onLongPress={() => handleLongPress(item)}
+      />
     ),
-    [user?.id]
+    [user?.id, selectedMessage, handleLongPress]
   );
 
   const handleTextChange = useCallback(
@@ -495,6 +551,26 @@ export default function ChatThreadScreen() {
               ) : null
             }
           />
+        )}
+
+        {selectedMessage && (
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setSelectedMessage(null)}
+            testID="delete-menu-backdrop"
+          >
+            <View style={[styles.deleteMessageMenuWrapper, { pointerEvents: "box-none" }]}>
+              <TouchableOpacity
+                style={styles.deleteMessageMenu}
+                onPress={handleDeleteMessage}
+                activeOpacity={0.8}
+                testID="delete-message-btn"
+              >
+                <Text style={styles.deleteMessageMenuText}>Delete</Text>
+                <Ionicons name="trash-outline" size={18} color="#be123c" />
+              </TouchableOpacity>
+            </View>
+          </Pressable>
         )}
 
         <View
@@ -736,6 +812,44 @@ const styles = StyleSheet.create({
   },
   bubbleTimeThem: {
     color: "#737373",
+  },
+  bubbleSelected: {
+    opacity: 0.7,
+  },
+  deleteMessageMenuWrapper: {
+    position: "absolute",
+    bottom: 8,
+    right: 16,
+  },
+  deleteMessageMenu: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: "#f0f0f0",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 6,
+      },
+      web: {
+        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+      },
+    }),
+  },
+  deleteMessageMenuText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 16,
+    color: "#be123c",
   },
   composer: {
     flexDirection: "row",

@@ -28,6 +28,7 @@ import {
   sendMessage,
   markConversationRead,
   deleteConversation,
+  deleteMessage,
   registerPushToken,
 } from "./chat";
 import { setupSocketIO } from "./socket";
@@ -108,6 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/mobile/conversations", createConversation);
   app.get("/api/mobile/conversations/:id/messages", getMessages);
   app.post("/api/mobile/conversations/:id/messages", sendMessage);
+  app.delete("/api/mobile/conversations/:id/messages/:messageId", deleteMessage);
   app.patch("/api/mobile/conversations/:id/read", markConversationRead);
   app.delete("/api/mobile/conversations/:id", deleteConversation);
 

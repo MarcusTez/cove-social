@@ -440,6 +440,51 @@ export async function deleteConversation(req: Request, res: Response) {
   }
 }
 
+export async function deleteMessage(req: Request, res: Response) {
+  const userId = await validateTokenAndGetUserId(req.headers.authorization);
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+  const { id: conversationId, messageId } = req.params;
+
+  try {
+    const [participant] = await db
+      .select()
+      .from(conversationParticipants)
+      .where(
+        and(
+          eq(conversationParticipants.conversationId, conversationId),
+          eq(conversationParticipants.userId, userId)
+        )
+      );
+
+    if (!participant) {
+      return res.status(403).json({ error: "Not a participant in this conversation" });
+    }
+
+    const [message] = await db
+      .select()
+      .from(messages)
+      .where(
+        and(
+          eq(messages.id, messageId),
+          eq(messages.conversationId, conversationId),
+          eq(messages.senderId, userId)
+        )
+      );
+
+    if (!message) {
+      return res.status(404).json({ error: "Message not found or not yours to delete" });
+    }
+
+    await db.delete(messages).where(eq(messages.id, messageId));
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting message:", error);
+    res.status(500).json({ error: "Failed to delete message" });
+  }
+}
+
 export async function markConversationRead(req: Request, res: Response) {
   const userId = await validateTokenAndGetUserId(req.headers.authorization);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
