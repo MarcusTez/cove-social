@@ -191,7 +191,7 @@ export default function EventDetailScreen() {
           <Text style={styles.sectionTitle}>Event details</Text>
           <Text style={styles.bodyText}>{event.description}</Text>
 
-          {rsvpStatus === "confirmed" && event.confirmedDetails ? (
+          {rsvpStatus === "confirmed" && event.confirmedDetails !== null ? (
             <>
               <View style={styles.divider} />
               <Text style={styles.sectionTitle}>You're going</Text>
