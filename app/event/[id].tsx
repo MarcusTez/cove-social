@@ -9,7 +9,9 @@ import {
   Dimensions,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
+import { useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,6 +30,8 @@ export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   const handleBack = () => {
     if (router.canGoBack()) {
@@ -65,6 +69,22 @@ export default function EventDetailScreen() {
       } else {
         Alert.alert("Something went wrong", "Please try again.");
       }
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("DELETE", `/api/mobile/events/${id}/rsvp`);
+      return res.json();
+    },
+    onSuccess: () => {
+      setShowCancelModal(false);
+      qc.invalidateQueries({ queryKey: ["/api/mobile/events", id] });
+      qc.invalidateQueries({ queryKey: ["/api/mobile/events"] });
+    },
+    onError: () => {
+      setShowCancelModal(false);
+      Alert.alert("Something went wrong", "Please try again.");
     },
   });
 
@@ -235,7 +255,52 @@ export default function EventDetailScreen() {
             <Text style={styles.bookButtonText}>{bookButtonLabel}</Text>
           )}
         </TouchableOpacity>
+        {hasRsvped && (
+          <TouchableOpacity
+            style={styles.cancelTextButton}
+            onPress={() => setShowCancelModal(true)}
+            activeOpacity={0.6}
+          >
+            <Text style={styles.cancelText}>Cancel</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      <Modal
+        visible={showCancelModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCancelModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>Cancel your spot?</Text>
+            <Text style={styles.modalBody}>
+              Are you sure you want to cancel? You may not be able to get your spot back.
+            </Text>
+            <TouchableOpacity
+              style={styles.modalConfirmButton}
+              onPress={() => cancelMutation.mutate()}
+              activeOpacity={0.8}
+              disabled={cancelMutation.isPending}
+            >
+              {cancelMutation.isPending ? (
+                <ActivityIndicator size="small" color="#fafafa" />
+              ) : (
+                <Text style={styles.modalConfirmText}>Yes, cancel</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalDismissButton}
+              onPress={() => setShowCancelModal(false)}
+              activeOpacity={0.6}
+              disabled={cancelMutation.isPending}
+            >
+              <Text style={styles.modalDismissText}>Keep my spot</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -403,5 +468,63 @@ const styles = StyleSheet.create({
     color: "#a3a3a3",
     textAlign: "center",
     marginBottom: 8,
+  },
+  cancelTextButton: {
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  cancelText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: "#171717",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  modalSheet: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
+    width: "100%",
+    gap: 12,
+  },
+  modalTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 17,
+    color: "#171717",
+    textAlign: "center",
+  },
+  modalBody: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#525252",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  modalConfirmButton: {
+    backgroundColor: "#171717",
+    borderRadius: 30,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  modalConfirmText: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: "#fafafa",
+  },
+  modalDismissButton: {
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  modalDismissText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: "#737373",
   },
 });
