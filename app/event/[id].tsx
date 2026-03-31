@@ -112,7 +112,7 @@ export default function EventDetailScreen() {
       : rsvpStatus === "declined"
       ? "DECLINED"
       : rsvpStatus === "pending"
-      ? "PENDING APPROVAL"
+      ? "REQUESTED"
       : event.isOpen
       ? "BOOKING OPEN"
       : "BOOKING CLOSED";
