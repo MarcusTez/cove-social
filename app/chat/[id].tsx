@@ -255,11 +255,13 @@ export default function ChatThreadScreen() {
   useEffect(() => {
     if (!id) return;
 
-    apiRequest("PATCH", `/api/mobile/conversations/${id}/read`).catch(() => {});
-
-    queryClient.invalidateQueries({
-      queryKey: ["/api/mobile/conversations"],
-    });
+    apiRequest("PATCH", `/api/mobile/conversations/${id}/read`)
+      .then(() => {
+        queryClient.invalidateQueries({
+          queryKey: ["/api/mobile/conversations"],
+        });
+      })
+      .catch(() => {});
   }, [id]);
 
   const handleSend = useCallback(() => {

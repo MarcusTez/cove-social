@@ -63,7 +63,7 @@ function NativeTabLayout() {
       <NativeTabs.Trigger name="chat">
         <Icon sf={{ default: "bubble.left", selected: "bubble.left.fill" }} />
         <Label>Chat</Label>
-        <Badge hidden={!hasUnread}>{" "}</Badge>
+        {hasUnread && <Badge>{" "}</Badge>}
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="events">
         <Icon sf={{ default: "calendar", selected: "calendar" }} />
