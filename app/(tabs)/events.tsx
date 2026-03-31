@@ -8,10 +8,12 @@ import {
   TouchableOpacity,
   RefreshControl,
 } from "react-native";
+
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
+
 import {
   groupEventsByDate,
   formatEventDateTime,
@@ -20,10 +22,36 @@ import {
   type RsvpStatus,
 } from "@/lib/api-events";
 
+const CONFIRMED_CARD_WIDTH = 230;
 const OPEN_COLOR = "#22c55e";
 const CLOSED_COLOR = "#737373";
 const RSVPED_COLOR = "#6366f1";
 const CONFIRMED_COLOR = "#22c55e";
+
+function ConfirmedEventCard({ event, onPress }: { event: ApiEvent; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={styles.confirmedCard} activeOpacity={0.7} onPress={onPress}>
+      {event.imageData ? (
+        <Image
+          source={{ uri: event.imageData }}
+          style={styles.confirmedCardImage}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={[styles.confirmedCardImage, styles.cardImagePlaceholder]} />
+      )}
+      <View style={styles.confirmedCardContent}>
+        <Text style={styles.confirmedCardTitle} numberOfLines={3}>
+          {event.title}
+        </Text>
+        <View style={styles.statusRow}>
+          <View style={[styles.statusDot, { backgroundColor: CONFIRMED_COLOR }]} />
+          <Text style={[styles.statusText, { color: CONFIRMED_COLOR }]}>CONFIRMED</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 function EventCard({ event, onPress }: { event: ApiEvent; onPress: () => void }) {
   const rsvpStatus: RsvpStatus = event.rsvpStatus ?? null;
@@ -108,6 +136,9 @@ export default function EventsScreen() {
   });
 
   const sections = data ? groupEventsByDate(data.events) : [];
+  const confirmedEvents = data
+    ? data.events.filter((e) => e.rsvpStatus === "confirmed")
+    : [];
 
   const handleRefresh = () => {
     refetch();
@@ -161,6 +192,25 @@ export default function EventsScreen() {
           </View>
         )}
 
+        {confirmedEvents.length > 0 && (
+          <View style={styles.youreInSection}>
+            <Text style={styles.sectionLabel}>You're in</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.confirmedScrollContent}
+            >
+              {confirmedEvents.map((event) => (
+                <ConfirmedEventCard
+                  key={event.id}
+                  event={event}
+                  onPress={() => router.push(`/event/${event.id}`)}
+                />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {sections.map((section) => (
           <View key={section.label} style={styles.section}>
             <Text style={styles.sectionLabel}>{section.label}</Text>
@@ -199,6 +249,37 @@ const styles = StyleSheet.create({
     color: "#171717",
     marginBottom: 12,
     marginTop: 8,
+  },
+  youreInSection: {
+    marginBottom: 16,
+  },
+  confirmedScrollContent: {
+    paddingRight: 16,
+    gap: 12,
+  },
+  confirmedCard: {
+    flexDirection: "row",
+    width: CONFIRMED_CARD_WIDTH,
+    gap: 10,
+    alignItems: "flex-start",
+  },
+  confirmedCardImage: {
+    width: 110,
+    height: 110,
+    borderRadius: 8,
+    flexShrink: 0,
+    backgroundColor: "#e5e5e5",
+  },
+  confirmedCardContent: {
+    flex: 1,
+    paddingTop: 2,
+    gap: 6,
+  },
+  confirmedCardTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+    color: "#171717",
+    lineHeight: 18,
   },
   card: {
     flexDirection: "row",
