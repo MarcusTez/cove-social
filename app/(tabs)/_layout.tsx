@@ -51,6 +51,33 @@ function ChatIconWithDot({
   );
 }
 
+function ChatDotIcon({ focused, hasUnread }: { focused: boolean; hasUnread: boolean }) {
+  return (
+    <View style={{ width: 30, height: 30, alignItems: "center", justifyContent: "center" }}>
+      <Ionicons
+        name={focused ? "chatbubble" : "chatbubble-outline"}
+        size={25}
+        color={focused ? "#007AFF" : "#8E8E93"}
+      />
+      {hasUnread && (
+        <View
+          style={{
+            position: "absolute",
+            top: 2,
+            right: 2,
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: "#171717",
+            borderWidth: 1,
+            borderColor: "#ffffff",
+          }}
+        />
+      )}
+    </View>
+  );
+}
+
 function NativeTabLayout() {
   const hasUnread = useHasUnread();
 
@@ -60,15 +87,13 @@ function NativeTabLayout() {
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>Home</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger
-        name="chat"
-        options={{
-          badgeValue: hasUnread ? " " : undefined,
-          badgeBackgroundColor: "#171717",
-          selectedBadgeBackgroundColor: "#171717",
-        }}
-      >
-        <Icon sf={{ default: "bubble.left", selected: "bubble.left.fill" }} />
+      <NativeTabs.Trigger name="chat">
+        <Icon
+          src={{
+            default: <ChatDotIcon focused={false} hasUnread={hasUnread} />,
+            selected: <ChatDotIcon focused={true} hasUnread={hasUnread} />,
+          }}
+        />
         <Label>Chat</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="events">
