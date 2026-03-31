@@ -75,15 +75,15 @@ export default function EventDetailScreen() {
   const cancelMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("DELETE", `/api/mobile/events/${id}/rsvp`);
-      return res.json();
+      const text = await res.text();
+      return text ? JSON.parse(text) : {};
     },
-    onSuccess: () => {
+    onSettled: () => {
       setShowCancelModal(false);
       qc.invalidateQueries({ queryKey: ["/api/mobile/events", id] });
       qc.invalidateQueries({ queryKey: ["/api/mobile/events"] });
     },
     onError: () => {
-      setShowCancelModal(false);
       Alert.alert("Something went wrong", "Please try again.");
     },
   });
