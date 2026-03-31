@@ -246,7 +246,8 @@ export default function RegisterScreen() {
             </View>
           </View>
         </View>
-        <Text style={styles.versionText}>v1.1.2</Text>
+        {/* VERSION: when bumping the app version, update this string AND app.json > "version" */}
+        <Text style={styles.versionText}>v1.1.4</Text>
       </ScrollView>
 
       <Modal
