@@ -28,6 +28,14 @@ export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/events");
+    }
+  };
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const qc = useQueryClient();
 
@@ -65,7 +73,7 @@ export default function EventDetailScreen() {
       <View style={styles.centeredState}>
         <TouchableOpacity
           style={[styles.backButtonAbsolute, { top: insets.top + webTopInset + 12 }]}
-          onPress={() => router.back()}
+          onPress={handleBack}
         >
           <Ionicons name="chevron-back" size={22} color="#171717" />
         </TouchableOpacity>
@@ -79,7 +87,7 @@ export default function EventDetailScreen() {
       <View style={styles.centeredState}>
         <TouchableOpacity
           style={[styles.backButtonAbsolute, { top: insets.top + webTopInset + 12 }]}
-          onPress={() => router.back()}
+          onPress={handleBack}
         >
           <Ionicons name="chevron-back" size={22} color="#171717" />
         </TouchableOpacity>
@@ -163,7 +171,7 @@ export default function EventDetailScreen() {
           >
             <TouchableOpacity
               style={styles.backButton}
-              onPress={() => router.back()}
+              onPress={handleBack}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Ionicons name="chevron-back" size={22} color="#fafafa" />
