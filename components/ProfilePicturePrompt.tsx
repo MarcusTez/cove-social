@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Platform,
   Image,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -69,7 +70,6 @@ export function ProfilePicturePrompt({ userId, hasPhoto }: ProfilePicturePromptP
     getShowCount(userId).then((count) => {
       if (!cancelled && count < MAX_SHOW_COUNT) {
         setVisible(true);
-        incrementShowCount(userId);
       }
     });
 
@@ -79,8 +79,9 @@ export function ProfilePicturePrompt({ userId, hasPhoto }: ProfilePicturePromptP
   }, [userId, hasPhoto]);
 
   const handleDismiss = useCallback(() => {
+    incrementShowCount(userId);
     setVisible(false);
-  }, []);
+  }, [userId]);
 
   const handlePickAndUpload = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -115,8 +116,7 @@ export function ProfilePicturePrompt({ userId, hasPhoto }: ProfilePicturePromptP
         setUploadedUri(null);
       }, 800);
     } catch {
-      // silent fail — just dismiss
-      setVisible(false);
+      Alert.alert("Upload failed", "We couldn't save your photo. Please try again.");
     } finally {
       setUploading(false);
     }

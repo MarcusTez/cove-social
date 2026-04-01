@@ -73,8 +73,9 @@ interface MatchesResponse {
   matches: Match[];
 }
 
-interface ProfilePhotosResponse {
-  photos: { id: string }[];
+interface ProfileApiResponse {
+  photos: { id: string; displayOrder: number; photoData: string; createdAt: string }[];
+  [key: string]: unknown;
 }
 
 export default function HomeScreen() {
@@ -94,10 +95,10 @@ export default function HomeScreen() {
     queryKey: ["/api/mobile/matches"],
   });
 
-  const { data: profileData, isSuccess: profileLoaded } = useQuery<ProfilePhotosResponse>({
+  const { data: profileData, isSuccess: profileLoaded } = useQuery<ProfileApiResponse, Error, { photos: ProfileApiResponse["photos"] }>({
     queryKey: ["/api/mobile/profile"],
     enabled: !!user,
-    select: (d: any) => ({ photos: d?.photos ?? [] }),
+    select: (d) => ({ photos: d.photos ?? [] }),
   });
 
   const hasPhoto = (profileData?.photos?.length ?? 0) > 0;
