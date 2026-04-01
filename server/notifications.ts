@@ -31,7 +31,12 @@ export async function sendExpoPushNotification(
 
 export async function eventConfirmedWebhook(req: Request, res: Response) {
   const secret = process.env.WEBHOOK_SECRET;
-  if (secret && req.headers["x-webhook-secret"] !== secret) {
+  if (!secret) {
+    console.error("WEBHOOK_SECRET environment variable is not set");
+    return res.status(500).json({ error: "Webhook not configured" });
+  }
+  const provided = req.get("x-webhook-secret");
+  if (!provided || provided !== secret) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
