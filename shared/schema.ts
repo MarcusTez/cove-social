@@ -106,6 +106,15 @@ export type Message = typeof messages.$inferSelect;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 
+export const userTokens = pgTable("user_tokens", {
+  userId: varchar("user_id").primaryKey(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type UserToken = typeof userTokens.$inferSelect;
+
 export const rsvpTracking = pgTable(
   "rsvp_tracking",
   {
