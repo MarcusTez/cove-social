@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -61,6 +61,7 @@ export function ProfilePicturePrompt({ userId, hasPhoto }: ProfilePicturePromptP
   const [visible, setVisible] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadedUri, setUploadedUri] = useState<string | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (hasPhoto || !userId) return;
@@ -77,6 +78,14 @@ export function ProfilePicturePrompt({ userId, hasPhoto }: ProfilePicturePromptP
       cancelled = true;
     };
   }, [userId, hasPhoto]);
+
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleDismiss = useCallback(() => {
     incrementShowCount(userId);
@@ -111,7 +120,7 @@ export function ProfilePicturePrompt({ userId, hasPhoto }: ProfilePicturePromptP
       await markNeverShowAgain(userId);
       queryClient.invalidateQueries({ queryKey: ["/api/mobile/profile"] });
       setUploadedUri(asset.uri);
-      setTimeout(() => {
+      successTimerRef.current = setTimeout(() => {
         setVisible(false);
         setUploadedUri(null);
       }, 800);
@@ -132,7 +141,7 @@ export function ProfilePicturePrompt({ userId, hasPhoto }: ProfilePicturePromptP
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={handleDismiss}
+      onRequestClose={() => {}}
     >
       <View style={styles.backdrop}>
         <View style={[styles.card, { paddingBottom: bottomPad, paddingTop: topPad }]}>
