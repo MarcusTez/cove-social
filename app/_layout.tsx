@@ -16,7 +16,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import React, { useEffect, useState, useCallback, useRef } from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -84,11 +84,13 @@ function RootLayoutNav() {
       }
     }
 
-    Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response) {
-        handleNotificationData(response.notification.request.content.data);
-      }
-    });
+    if (Platform.OS !== "web") {
+      Notifications.getLastNotificationResponseAsync().then((response) => {
+        if (response) {
+          handleNotificationData(response.notification.request.content.data);
+        }
+      });
+    }
 
     notificationListenerRef.current = Notifications.addNotificationResponseReceivedListener((response) => {
       handleNotificationData(response.notification.request.content.data);
