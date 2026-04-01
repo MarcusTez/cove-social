@@ -115,7 +115,7 @@ async function proxyToCove(req: Request, res: Response) {
     res.setHeader("Content-Type", "application/json");
     res.send(data);
 
-    if (req.headers.authorization) {
+    if (response.ok && req.headers.authorization) {
       const userId = getUserIdFromAuth(req.headers.authorization as string);
       if (userId) {
         refreshStoredAuthToken(userId, req.headers.authorization as string).catch(() => {});
