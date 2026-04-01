@@ -11,8 +11,8 @@ import {
   Alert,
   Modal,
 } from "react-native";
-import { useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useState, useCallback } from "react";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -44,10 +44,18 @@ export default function EventDetailScreen() {
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const qc = useQueryClient();
 
-  const { data, isLoading, isError } = useQuery<ApiEventResponse>({
+  const { data, isLoading, isError, refetch } = useQuery<ApiEventResponse>({
     queryKey: ["/api/mobile/events", id],
     enabled: !!id,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      if (id) refetch();
+    }, [id, refetch])
+  );
 
   const event = data?.event;
 
@@ -228,10 +236,10 @@ export default function EventDetailScreen() {
           </View>
           <Text style={styles.addressText}>{event.address}</Text>
 
-          {rsvpStatus === "confirmed" && event.confirmedDetails !== null ? (
+          {rsvpStatus === "confirmed" && !!event.confirmedDetails ? (
             <>
               <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>You're going</Text>
+              <Text style={styles.sectionTitle}>What to expect</Text>
               <Text style={styles.bodyText}>{event.confirmedDetails}</Text>
             </>
           ) : null}
