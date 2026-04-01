@@ -249,7 +249,7 @@ export async function pollRsvps(): Promise<void> {
 }
 
 export function startRsvpPoller(): void {
-  console.log("[poller] RSVP status poller started — interval: 15 minutes, initial run in 30s");
-  setTimeout(pollRsvps, 30_000);
-  setInterval(pollRsvps, 15 * 60 * 1000);
+  console.log("[poller] RSVP status poller started — interval: 1 minute, initial run in 5s");
+  setTimeout(pollRsvps, 5_000);
+  setInterval(pollRsvps, 60 * 1000);
 }
