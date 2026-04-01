@@ -86,6 +86,14 @@ async function storeUserTokens(accessToken: string, refreshToken: string | null)
     const userId = getUserIdFromJwt(accessToken);
     if (!userId) return;
 
+    const updateSet: Record<string, unknown> = {
+      accessToken,
+      updatedAt: new Date(),
+    };
+    if (refreshToken !== null) {
+      updateSet.refreshToken = refreshToken;
+    }
+
     await db
       .insert(userTokens)
       .values({
@@ -96,11 +104,7 @@ async function storeUserTokens(accessToken: string, refreshToken: string | null)
       })
       .onConflictDoUpdate({
         target: userTokens.userId,
-        set: {
-          accessToken,
-          refreshToken: refreshToken,
-          updatedAt: new Date(),
-        },
+        set: updateSet as { accessToken: string; updatedAt: Date; refreshToken?: string | null },
       });
 
     await db

@@ -54,17 +54,6 @@ function parseTokensFromBody(body: unknown): { accessToken: string | null; refre
   return { accessToken, refreshToken };
 }
 
-function getUserIdFromJwt(token: string): string | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length < 2) return null;
-    const payload = JSON.parse(Buffer.from(parts[1], "base64").toString("utf8"));
-    return payload.sub ?? payload.userId ?? payload.id ?? payload.user_id ?? null;
-  } catch {
-    return null;
-  }
-}
-
 type RefreshOutcome =
   | { ok: true; token: string }
   | { ok: false; terminal: boolean };
