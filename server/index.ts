@@ -1,6 +1,7 @@
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
+import { startRsvpPoller } from "./poller";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -236,6 +237,8 @@ function setupErrorHandler(app: express.Application) {
   const server = await registerRoutes(app);
 
   setupErrorHandler(app);
+
+  startRsvpPoller();
 
   const port = parseInt(process.env.PORT || "5000", 10);
   server.listen(

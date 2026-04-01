@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, primaryKey, uniqueIndex, index, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, primaryKey, uniqueIndex, index, pgEnum, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -105,3 +105,25 @@ export type ConversationParticipant = typeof conversationParticipants.$inferSele
 export type Message = typeof messages.$inferSelect;
 export type InsertConversation = z.infer<typeof insertConversationSchema>;
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
+
+export const rsvpTracking = pgTable(
+  "rsvp_tracking",
+  {
+    id: varchar("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: varchar("user_id").notNull(),
+    eventId: varchar("event_id").notNull(),
+    lastKnownStatus: varchar("last_known_status").notNull().default("pending"),
+    userAuthToken: text("user_auth_token").notNull(),
+    eventName: text("event_name"),
+    tokenExpired: boolean("token_expired").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("rsvp_tracking_user_event_idx").on(table.userId, table.eventId),
+  ]
+);
+
+export type RsvpTracking = typeof rsvpTracking.$inferSelect;

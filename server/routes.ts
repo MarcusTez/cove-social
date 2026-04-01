@@ -34,6 +34,48 @@ import {
 import { setupSocketIO } from "./socket";
 import { COVE_API_BASE } from "./config";
 import { eventConfirmedWebhook } from "./notifications";
+import { db } from "./db";
+import { rsvpTracking } from "../shared/schema";
+import { eq, and } from "drizzle-orm";
+
+function getUserIdFromAuth(authHeader?: string): string | null {
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  try {
+    const token = authHeader.slice(7);
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const payload = JSON.parse(
+      Buffer.from(parts[1], "base64").toString("utf8")
+    );
+    return (
+      payload.sub ??
+      payload.userId ??
+      payload.id ??
+      payload.user_id ??
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
+async function refreshStoredAuthToken(
+  userId: string,
+  authHeader: string
+): Promise<void> {
+  try {
+    await db
+      .update(rsvpTracking)
+      .set({ userAuthToken: authHeader, tokenExpired: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(rsvpTracking.userId, userId),
+          eq(rsvpTracking.lastKnownStatus, "pending")
+        )
+      );
+  } catch {
+  }
+}
 
 async function proxyToCove(req: Request, res: Response) {
   const path = req.path.replace("/api/mobile", "");
@@ -72,6 +114,145 @@ async function proxyToCove(req: Request, res: Response) {
 
     res.setHeader("Content-Type", "application/json");
     res.send(data);
+
+    if (req.headers.authorization) {
+      const userId = getUserIdFromAuth(req.headers.authorization as string);
+      if (userId) {
+        refreshStoredAuthToken(userId, req.headers.authorization as string).catch(() => {});
+      }
+    }
+  } catch (error) {
+    console.error("Proxy error:", error);
+    res.status(502).json({ error: "Failed to reach Cove API" });
+  }
+}
+
+async function rsvpPost(req: Request, res: Response) {
+  const eventId = req.params.id;
+  const path = req.path.replace("/api/mobile", "");
+  const targetUrl = `${COVE_API_BASE}${path}`;
+
+  try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (req.headers.authorization) {
+      headers["Authorization"] = req.headers.authorization as string;
+    }
+
+    const fetchOptions: RequestInit = {
+      method: "POST",
+      headers,
+    };
+
+    if (req.body && Object.keys(req.body).length > 0) {
+      fetchOptions.body = JSON.stringify(req.body);
+    }
+
+    const response = await fetch(targetUrl, fetchOptions);
+    const data = await response.text();
+
+    res.status(response.status);
+    response.headers.forEach((value, key) => {
+      const skip = ["transfer-encoding", "content-encoding", "content-length", "connection"];
+      if (!skip.includes(key.toLowerCase())) {
+        res.setHeader(key, value);
+      }
+    });
+    res.setHeader("Content-Type", "application/json");
+    res.send(data);
+
+    if (response.ok && req.headers.authorization) {
+      const userId = getUserIdFromAuth(req.headers.authorization as string);
+      if (userId) {
+        let eventName: string | null = null;
+        try {
+          const parsed = JSON.parse(data);
+          eventName =
+            parsed?.eventName ??
+            parsed?.event?.name ??
+            parsed?.name ??
+            null;
+        } catch {
+        }
+
+        db.insert(rsvpTracking)
+          .values({
+            userId,
+            eventId,
+            lastKnownStatus: "pending",
+            userAuthToken: req.headers.authorization as string,
+            eventName,
+            tokenExpired: false,
+          })
+          .onConflictDoUpdate({
+            target: [rsvpTracking.userId, rsvpTracking.eventId],
+            set: {
+              lastKnownStatus: "pending",
+              userAuthToken: req.headers.authorization as string,
+              eventName: eventName ?? rsvpTracking.eventName,
+              tokenExpired: false,
+              updatedAt: new Date(),
+            },
+          })
+          .catch((err: unknown) => {
+            console.error("[rsvp] Failed to track RSVP:", err);
+          });
+
+        console.log(`[rsvp] Tracking RSVP for user=${userId} event=${eventId}`);
+      }
+    }
+  } catch (error) {
+    console.error("Proxy error:", error);
+    res.status(502).json({ error: "Failed to reach Cove API" });
+  }
+}
+
+async function rsvpDelete(req: Request, res: Response) {
+  const eventId = req.params.id;
+  const path = req.path.replace("/api/mobile", "");
+  const targetUrl = `${COVE_API_BASE}${path}`;
+
+  try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (req.headers.authorization) {
+      headers["Authorization"] = req.headers.authorization as string;
+    }
+
+    const response = await fetch(targetUrl, { method: "DELETE", headers });
+    const data = await response.text();
+
+    res.status(response.status);
+    response.headers.forEach((value, key) => {
+      const skip = ["transfer-encoding", "content-encoding", "content-length", "connection"];
+      if (!skip.includes(key.toLowerCase())) {
+        res.setHeader(key, value);
+      }
+    });
+    res.setHeader("Content-Type", "application/json");
+    res.send(data);
+
+    if (response.ok && req.headers.authorization) {
+      const userId = getUserIdFromAuth(req.headers.authorization as string);
+      if (userId) {
+        db.delete(rsvpTracking)
+          .where(
+            and(
+              eq(rsvpTracking.userId, userId),
+              eq(rsvpTracking.eventId, eventId)
+            )
+          )
+          .catch((err: unknown) => {
+            console.error("[rsvp] Failed to remove RSVP tracking:", err);
+          });
+
+        console.log(`[rsvp] Removed tracking for user=${userId} event=${eventId}`);
+      }
+    }
   } catch (error) {
     console.error("Proxy error:", error);
     res.status(502).json({ error: "Failed to reach Cove API" });
@@ -101,8 +282,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/mobile/subscription", proxyToCove);
   app.get("/api/mobile/events", proxyToCove);
   app.get("/api/mobile/events/:id", proxyToCove);
-  app.post("/api/mobile/events/:id/rsvp", proxyToCove);
-  app.delete("/api/mobile/events/:id/rsvp", proxyToCove);
+  app.post("/api/mobile/events/:id/rsvp", rsvpPost);
+  app.delete("/api/mobile/events/:id/rsvp", rsvpDelete);
 
   app.post("/api/mobile/push-token", registerPushToken);
   app.post("/api/webhooks/event-confirmed", eventConfirmedWebhook);
