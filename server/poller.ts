@@ -1,7 +1,7 @@
 import { db } from "./db";
 import { rsvpTracking, pushTokens, userTokens } from "../shared/schema";
 import { eq, and } from "drizzle-orm";
-import { COVE_API_BASE } from "./config";
+import { COVE_API_BASE, IS_DEV } from "./config";
 import { sendExpoPushNotification } from "./notifications";
 
 function extractRsvpStatus(eventData: unknown): string | null {
@@ -65,7 +65,11 @@ function getUserIdFromJwt(token: string): string | null {
   }
 }
 
-async function tryRefreshToken(userId: string): Promise<string | null> {
+type RefreshOutcome =
+  | { ok: true; token: string }
+  | { ok: false; terminal: boolean };
+
+async function tryRefreshToken(userId: string): Promise<RefreshOutcome> {
   const [stored] = await db
     .select()
     .from(userTokens)
@@ -73,7 +77,7 @@ async function tryRefreshToken(userId: string): Promise<string | null> {
 
   if (!stored?.refreshToken) {
     console.log(`[poller] No refresh token stored for user ${userId}`);
-    return null;
+    return { ok: false, terminal: true };
   }
 
   console.log(`[poller] Attempting token refresh for user ${userId}`);
@@ -86,17 +90,22 @@ async function tryRefreshToken(userId: string): Promise<string | null> {
       body: JSON.stringify({ refreshToken: stored.refreshToken }),
     });
 
+    if (resp.status === 400 || resp.status === 401) {
+      console.log(`[poller] Refresh rejected (${resp.status}) for user ${userId} — refresh token invalid`);
+      return { ok: false, terminal: true };
+    }
+
     if (!resp.ok) {
-      console.log(`[poller] Refresh failed for user ${userId}: status ${resp.status}`);
-      return null;
+      console.log(`[poller] Refresh transient failure (${resp.status}) for user ${userId} — will retry next cycle`);
+      return { ok: false, terminal: false };
     }
 
     const body = await resp.json();
     const { accessToken, refreshToken } = parseTokensFromBody(body);
 
     if (!accessToken) {
-      console.log(`[poller] Refresh response missing access token for user ${userId}`);
-      return null;
+      console.log(`[poller] Refresh response missing access token for user ${userId} — will retry next cycle`);
+      return { ok: false, terminal: false };
     }
 
     await db
@@ -127,10 +136,10 @@ async function tryRefreshToken(userId: string): Promise<string | null> {
       );
 
     console.log(`[poller] Token refreshed successfully for user ${userId}`);
-    return `Bearer ${accessToken}`;
+    return { ok: true, token: `Bearer ${accessToken}` };
   } catch (err) {
-    console.error(`[poller] Error refreshing token for user ${userId}:`, err);
-    return null;
+    console.error(`[poller] Network error refreshing token for user ${userId} — will retry next cycle:`, err);
+    return { ok: false, terminal: false };
   }
 }
 
@@ -167,18 +176,22 @@ export async function pollRsvps(): Promise<void> {
 
         if (resp.status === 401) {
           console.log(`[poller] Got 401 for user ${row.userId}, event ${row.eventId} — trying token refresh`);
-          const newToken = await tryRefreshToken(row.userId);
+          const outcome = await tryRefreshToken(row.userId);
 
-          if (!newToken) {
-            console.log(`[poller] Could not refresh token for user ${row.userId} — marking expired`);
-            await db
-              .update(rsvpTracking)
-              .set({ tokenExpired: true, updatedAt: new Date() })
-              .where(eq(rsvpTracking.id, row.id));
+          if (!outcome.ok) {
+            if (outcome.terminal) {
+              console.log(`[poller] Terminal refresh failure for user ${row.userId} — marking expired`);
+              await db
+                .update(rsvpTracking)
+                .set({ tokenExpired: true, updatedAt: new Date() })
+                .where(eq(rsvpTracking.id, row.id));
+            } else {
+              console.log(`[poller] Transient refresh failure for user ${row.userId} — will retry next cycle`);
+            }
             continue;
           }
 
-          authToken = newToken;
+          authToken = outcome.token;
           resp = await fetch(eventUrl, {
             headers: {
               Authorization: authToken,
@@ -203,7 +216,11 @@ export async function pollRsvps(): Promise<void> {
 
         const eventData = await resp.json();
 
-        console.log(`[poller] Raw event response for ${row.eventId}: ${JSON.stringify(eventData).slice(0, 500)}`);
+        if (IS_DEV) {
+          console.log(`[poller] Raw event response for ${row.eventId}: ${JSON.stringify(eventData)}`);
+        } else {
+          console.log(`[poller] Raw event response for ${row.eventId} (keys): ${Object.keys(eventData as object).join(",")}`);
+        }
 
         const status = extractRsvpStatus(eventData);
 
