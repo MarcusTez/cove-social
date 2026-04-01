@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ProfileCard } from "@/components/ProfileCard";
 import { apiRequest, queryClient } from "@/lib/query-client";
 import { useAuth } from "@/lib/auth";
+import { ProfilePicturePrompt } from "@/components/ProfilePicturePrompt";
 
 interface MatchPhoto {
   id: string;
@@ -72,6 +73,10 @@ interface MatchesResponse {
   matches: Match[];
 }
 
+interface ProfilePhotosResponse {
+  photos: { id: string }[];
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -88,6 +93,14 @@ export default function HomeScreen() {
   } = useQuery<MatchesResponse>({
     queryKey: ["/api/mobile/matches"],
   });
+
+  const { data: profileData, isSuccess: profileLoaded } = useQuery<ProfilePhotosResponse>({
+    queryKey: ["/api/mobile/profile"],
+    enabled: !!user,
+    select: (d: any) => ({ photos: d?.photos ?? [] }),
+  });
+
+  const hasPhoto = (profileData?.photos?.length ?? 0) > 0;
 
   const matches = data?.matches ?? [];
   const hasIntroductions = matches.length > 0;
@@ -129,145 +142,143 @@ export default function HomeScreen() {
     router.push(`/profile/${matchId}`);
   };
 
-  if (isLoading) {
-    return (
-      <View
-        style={[
-          styles.emptyContainer,
-          { paddingTop: insets.top + webTopInset },
-        ]}
-      >
-        <LineLoader />
-      </View>
-    );
-  }
-
-  if (isError) {
-    return (
-      <View
-        style={[
-          styles.emptyContainer,
-          { paddingTop: insets.top + webTopInset },
-        ]}
-      >
-        <View style={styles.emptyContent}>
-          <Text style={styles.emptyTitle}>Something went wrong</Text>
-          <Text style={styles.emptySubtitle}>
-            We couldn't load your introductions.{"\n"}Pull down to try again.
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  if (!hasIntroductions) {
-    return (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={[
-          styles.emptyScrollContent,
-          {
-            paddingTop: insets.top + webTopInset,
-            paddingBottom: 100,
-          },
-        ]}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
-        }
-      >
-        <Text style={styles.emptyHeader}>Cove</Text>
-
-        <View style={styles.emptyMiddle}>
-          <Text style={styles.emptyTitle}>
-            Your introductions are{"\n"}being prepared
-          </Text>
-          <Text style={styles.emptySubtitle}>
-            We introduce members thoughtfully, not{"\n"}endlessly.
-          </Text>
-          <Text style={styles.emptySubtitle}>
-            Your next curated introductions will arrive{"\n"}soon.
-          </Text>
-        </View>
-
-        <View style={styles.improveCard}>
-          <Text style={styles.improveTitle}>Improve your introductions</Text>
-          <Text style={styles.improveText}>
-            More detailed profiles lead to better introductions. Keep your
-            profile up to date so we can match you thoughtfully.
-          </Text>
-          <TouchableOpacity
-            style={styles.updateButton}
-            onPress={() => router.navigate("/(tabs)/profile")}
-            testID="update-profile-button"
-          >
-            <Text style={styles.updateButtonText}>Update my profile</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    );
-  }
-
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={[
-        styles.scrollContent,
-        {
-          paddingTop: insets.top + webTopInset + 8,
-          paddingBottom: 100,
-        },
-      ]}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
-      }
-    >
-      <Text style={styles.title}>This week's introductions</Text>
-      <Text style={styles.subtitle}>
-        We introduce slowly and with care.{"\n"}A social life rarely changes through volume. It changes through a few people who truly matter.
-      </Text>
+    <View style={styles.rootContainer}>
+      {user && profileLoaded && <ProfilePicturePrompt userId={user.id} hasPhoto={hasPhoto} />}
 
-      <View style={styles.cardsContainer}>
-        {matches.map((match) => {
-          const partner = match.partner;
-          const firstPhoto = partner.photos?.length
-            ? [...partner.photos].sort((a, b) => a.displayOrder - b.displayOrder)[0]
-            : undefined;
-          const sortedPrompts = partner.prompts?.length
-            ? [...partner.prompts].sort((a, b) => a.displayOrder - b.displayOrder)
-            : [];
-          return (
-            <ProfileCard
-              key={match.id}
-              name={partner.firstName}
-              photoUrl={firstPhoto?.photoData}
-              location="London"
-              thisWeekActivities={partner.thisWeekActivities}
-              regularRituals={partner.regularRituals}
-              prompts={sortedPrompts}
-              overlapTags={match.overlapTags}
-              onMessage={() => handleMessage(match.id)}
-              onViewProfile={() => handleViewProfile(match.id)}
-              messageLoading={pendingMatchId === match.id}
-            />
-          );
-        })}
-      </View>
+      {isLoading ? (
+        <View
+          style={[
+            styles.emptyContainer,
+            { paddingTop: insets.top + webTopInset },
+          ]}
+        >
+          <LineLoader />
+        </View>
+      ) : isError ? (
+        <View
+          style={[
+            styles.emptyContainer,
+            { paddingTop: insets.top + webTopInset },
+          ]}
+        >
+          <View style={styles.emptyContent}>
+            <Text style={styles.emptyTitle}>Something went wrong</Text>
+            <Text style={styles.emptySubtitle}>
+              We couldn't load your introductions.{"\n"}Pull down to try again.
+            </Text>
+          </View>
+        </View>
+      ) : !hasIntroductions ? (
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={[
+            styles.emptyScrollContent,
+            {
+              paddingTop: insets.top + webTopInset,
+              paddingBottom: 100,
+            },
+          ]}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+          }
+        >
+          <Text style={styles.emptyHeader}>Cove</Text>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerTitle}>
-          Deliberate connections are rare. We treat them that way.
-        </Text>
-        <Text style={styles.footerText}>
-          No algorithms pushing volume. No endless feeds. Just considered
-          introductions, real conversation, and the space to see what could grow.
-        </Text>
-      </View>
-    </ScrollView>
+          <View style={styles.emptyMiddle}>
+            <Text style={styles.emptyTitle}>
+              Your introductions are{"\n"}being prepared
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              We introduce members thoughtfully, not{"\n"}endlessly.
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              Your next curated introductions will arrive{"\n"}soon.
+            </Text>
+          </View>
+
+          <View style={styles.improveCard}>
+            <Text style={styles.improveTitle}>Improve your introductions</Text>
+            <Text style={styles.improveText}>
+              More detailed profiles lead to better introductions. Keep your
+              profile up to date so we can match you thoughtfully.
+            </Text>
+            <TouchableOpacity
+              style={styles.updateButton}
+              onPress={() => router.navigate("/(tabs)/profile")}
+              testID="update-profile-button"
+            >
+              <Text style={styles.updateButtonText}>Update my profile</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      ) : (
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingTop: insets.top + webTopInset + 8,
+              paddingBottom: 100,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+          }
+        >
+          <Text style={styles.title}>This week's introductions</Text>
+          <Text style={styles.subtitle}>
+            We introduce slowly and with care.{"\n"}A social life rarely changes through volume. It changes through a few people who truly matter.
+          </Text>
+
+          <View style={styles.cardsContainer}>
+            {matches.map((match) => {
+              const partner = match.partner;
+              const firstPhoto = partner.photos?.length
+                ? [...partner.photos].sort((a, b) => a.displayOrder - b.displayOrder)[0]
+                : undefined;
+              const sortedPrompts = partner.prompts?.length
+                ? [...partner.prompts].sort((a, b) => a.displayOrder - b.displayOrder)
+                : [];
+              return (
+                <ProfileCard
+                  key={match.id}
+                  name={partner.firstName}
+                  photoUrl={firstPhoto?.photoData}
+                  location="London"
+                  thisWeekActivities={partner.thisWeekActivities}
+                  regularRituals={partner.regularRituals}
+                  prompts={sortedPrompts}
+                  overlapTags={match.overlapTags}
+                  onMessage={() => handleMessage(match.id)}
+                  onViewProfile={() => handleViewProfile(match.id)}
+                  messageLoading={pendingMatchId === match.id}
+                />
+              );
+            })}
+          </View>
+
+          <View style={styles.footer}>
+            <Text style={styles.footerTitle}>
+              Deliberate connections are rare. We treat them that way.
+            </Text>
+            <Text style={styles.footerText}>
+              No algorithms pushing volume. No endless feeds. Just considered
+              introductions, real conversation, and the space to see what could grow.
+            </Text>
+          </View>
+        </ScrollView>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  rootContainer: {
+    flex: 1,
+    backgroundColor: "#F9F9F7",
+  },
   container: {
     flex: 1,
     backgroundColor: "#F9F9F7",
