@@ -1,0 +1,53 @@
+Push Notification Architecture — React Native / Expo
+Overview
+The system uses Expo's push notification service as the delivery layer. The mobile app collects a device-specific token and sends it to your backend. The backend is then fully responsible for deciding when to send notifications and actually delivering them — the app itself schedules nothing locally.
+
+Step 1 — Request permission and obtain a token
+When a user authenticates, the app requests notification permissions and fetches an Expo Push Token. The setup varies slightly by platform:
+
+Android: Create a notification channel with your desired importance level, vibration, and sound settings before requesting the token.
+iOS: Request permissions specifying allowAlert, allowBadge, and allowSound. Check existing permission status first to avoid prompting unnecessarily.
+Once granted, call Notifications.getExpoPushTokenAsync() to get the token — a string like ExponentPushToken[xxxxxx] that Expo uses to route to the correct device.
+
+Step 2 — Send the token to your backend
+POST the token and platform (ios or android) to a backend endpoint — e.g. POST /api/notifications/register-token.
+
+To avoid redundant uploads on every app launch, cache the token locally (e.g. in AsyncStorage). Only re-upload if the token has changed or a set time window (e.g. 24 hours) has elapsed since last registration.
+
+Your backend should store the token against the user's account in a database table, associated with their user ID and platform.
+
+Step 3 — Backend sends notifications
+Your backend reads each user's stored token and preferences, then calls the Expo Push API directly:
+
+POST https://exp.host/--/api/v2/push/send
+{
+  "to": "ExponentPushToken[xxxxxx]",
+  "title": "Your notification title",
+  "body": "Your notification body",
+  "data": { "type": "your_event_type" }
+}
+This can be triggered by a cron job, scheduled task, or event-driven logic. Expo handles last-mile delivery to APNs (Apple) and FCM (Google).
+
+The data payload is arbitrary — use it to carry anything the app needs to deep-link to the right screen when the notification is tapped.
+
+Step 4 — Handle notifications in the app
+At app startup, configure Notifications.setNotificationHandler() to define how notifications appear when the app is already open in the foreground — typically: show alert, play sound, update badge.
+
+On iOS, you can optionally define action buttons using setNotificationCategoryAsync (e.g. "Open" and "Dismiss") and attach a categoryIdentifier to notifications you send. These appear as tappable buttons on the lock screen or notification banner.
+
+Add a listener for notification responses (addNotificationResponseReceivedListener) to handle deep-linking when a user taps a notification.
+
+Step 5 — Remove the token on logout
+When the user logs out, send a DELETE /api/notifications/unregister-token request with the cached token so the backend stops delivering notifications to that device. Clear the local cache afterward.
+
+Backend endpoints required
+Endpoint	Method	Purpose
+/api/notifications/register-token	POST	Store token + platform against user
+/api/notifications/unregister-token	DELETE	Remove token from database
+The backend then has a separate job or service that reads stored tokens and calls the Expo Push API on whatever schedule or trigger your app requires.
+
+Key implementation notes
+Tokens can change (e.g. after app reinstall). Always upsert, never assume a stored token is still valid.
+Expo Push API returns receipts — check them to detect invalid/expired tokens and clean up your database.
+iOS limits locally-scheduled notifications to 64 at a time; backend-driven push has no such limit and is the recommended approach for any meaningful frequency.
+Push notifications do not work on web — guard all token registration code with a platform check.
