@@ -772,7 +772,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   logoutConfirmButton: {
-    backgroundColor: "#dc2626",
+    backgroundColor: "#6b7280",
     borderRadius: 28,
     paddingVertical: 16,
     alignItems: "center" as const,
