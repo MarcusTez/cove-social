@@ -74,9 +74,13 @@ function RootLayoutNav() {
 
   useEffect(() => {
     notificationListenerRef.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      const conversationId = response.notification.request.content.data?.conversationId as string | undefined;
+      const data = response.notification.request.content.data;
+      const conversationId = data?.conversationId as string | undefined;
+      const eventId = data?.eventId as string | undefined;
       if (conversationId) {
         router.push(`/chat/${conversationId}`);
+      } else if (eventId) {
+        router.push(`/event/${eventId}`);
       }
     });
 

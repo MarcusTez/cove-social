@@ -4,21 +4,7 @@ import { db } from "./db";
 import { conversations, conversationParticipants, messages, pushTokens } from "../shared/schema";
 import { eq, and, ne } from "drizzle-orm";
 import { validateTokenAndGetUserId } from "./chat";
-
-async function sendExpoPushNotification(token: string, title: string, body: string, data: Record<string, string>) {
-  try {
-    await fetch("https://exp.host/push/send", {
-      method: "POST",
-      headers: {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ to: token, title, body, data, sound: "default" }),
-    });
-  } catch (err) {
-    console.error("Failed to send Expo push notification:", err);
-  }
-}
+import { sendExpoPushNotification } from "./notifications";
 
 let io: Server | null = null;
 

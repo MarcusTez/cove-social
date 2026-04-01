@@ -33,6 +33,7 @@ import {
 } from "./chat";
 import { setupSocketIO } from "./socket";
 import { COVE_API_BASE } from "./config";
+import { eventConfirmedWebhook } from "./notifications";
 
 async function proxyToCove(req: Request, res: Response) {
   const path = req.path.replace("/api/mobile", "");
@@ -104,6 +105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/mobile/events/:id/rsvp", proxyToCove);
 
   app.post("/api/mobile/push-token", registerPushToken);
+  app.post("/api/webhooks/event-confirmed", eventConfirmedWebhook);
 
   app.get("/api/mobile/conversations", getConversations);
   app.post("/api/mobile/conversations", createConversation);

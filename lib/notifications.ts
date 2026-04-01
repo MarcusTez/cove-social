@@ -35,6 +35,16 @@ export async function registerForPushNotifications(): Promise<string | null> {
     return null;
   }
 
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "Default",
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#FF231F7C",
+      sound: "default",
+    });
+  }
+
   try {
     const projectId =
       Constants.expoConfig?.extra?.eas?.projectId ??
