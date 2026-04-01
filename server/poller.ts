@@ -225,8 +225,8 @@ export async function pollRsvps(): Promise<void> {
             const eventName = row.eventName ?? "your event";
             await sendExpoPushNotification(
               tokenRow.token,
-              "You're Confirmed!",
-              `Your spot at ${eventName} is secured. Tap to see the event.`,
+              "You're in!",
+              `Your spot at ${eventName} is confirmed. Check the app now for event details, location, and what to expect.`,
               { eventId: row.eventId }
             );
             console.log(`[poller] Push notification sent to user ${row.userId} for event ${row.eventId}`);

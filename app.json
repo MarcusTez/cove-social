@@ -29,6 +29,10 @@
         "backgroundColor": "#FAF8F3",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "notification": {
+        "icon": "./assets/images/android-icon-monochrome.png",
+        "color": "#1a1a1a"
       }
     },
     "web": {

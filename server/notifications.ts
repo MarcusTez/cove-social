@@ -55,8 +55,8 @@ export async function eventConfirmedWebhook(req: Request, res: Response) {
     if (tokenRow?.token) {
       await sendExpoPushNotification(
         tokenRow.token,
-        "You're Confirmed!",
-        `Your spot at ${eventName} is secured for ${eventDate}. See the event for more information.`,
+        "You're in!",
+        `Your spot at ${eventName} is confirmed. Check the app now for event details, location, and what to expect.`,
         { eventId: String(eventId) }
       );
     }
