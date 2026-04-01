@@ -20,9 +20,20 @@ export async function sendExpoPushNotification(
       body: JSON.stringify({ to: token, title, body, data, sound: "default" }),
     });
 
+    const responseBody = await response.json() as Record<string, unknown>;
+
     if (!response.ok) {
-      const text = await response.text();
-      console.error("Expo push API error:", response.status, text);
+      console.error("[push] Expo push API HTTP error:", response.status, JSON.stringify(responseBody));
+      return;
+    }
+
+    const result = (responseBody.data as Record<string, unknown>) ?? responseBody;
+    const status = result.status as string | undefined;
+
+    if (status === "ok") {
+      console.log(`[push] Delivered OK — id=${result.id} token=${token.slice(0, 30)}...`);
+    } else {
+      console.error(`[push] Delivery failed — status=${status} message=${result.message} details=${JSON.stringify(result.details)} token=${token.slice(0, 30)}...`);
     }
   } catch (err) {
     console.error("Failed to send Expo push notification:", err);
