@@ -73,15 +73,25 @@ function RootLayoutNav() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    notificationListenerRef.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data;
-      const conversationId = data?.conversationId as string | undefined;
-      const eventId = data?.eventId as string | undefined;
+    function handleNotificationData(data: Record<string, unknown> | null | undefined) {
+      if (!data) return;
+      const conversationId = data.conversationId as string | undefined;
+      const eventId = data.eventId as string | undefined;
       if (conversationId) {
         router.push(`/chat/${conversationId}`);
       } else if (eventId) {
         router.push(`/event/${eventId}`);
       }
+    }
+
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) {
+        handleNotificationData(response.notification.request.content.data);
+      }
+    });
+
+    notificationListenerRef.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      handleNotificationData(response.notification.request.content.data);
     });
 
     return () => {
