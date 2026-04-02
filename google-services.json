@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "477846530441",
+    "project_id": "cove-social-b431b",
+    "storage_bucket": "cove-social-b431b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:477846530441:android:55fa3d049cd14469c7d958",
+        "android_client_info": {
+          "package_name": "com.cove.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA_I3267_YCih-VZfLBUwofG4m93YGEk9Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -6,16 +6,25 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "googleServicesFile": "./google-services.json"
+      }
     },
     "preview": {
       "distribution": "internal",
+      "android": {
+        "googleServicesFile": "./google-services.json"
+      },
       "env": {
         "EXPO_PUBLIC_DOMAIN": "cove-social.replit.app"
       }
     },
     "production": {
       "autoIncrement": true,
+      "android": {
+        "googleServicesFile": "./google-services.json"
+      },
       "env": {
         "EXPO_PUBLIC_DOMAIN": "cove-social.replit.app"
       }
