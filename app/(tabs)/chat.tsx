@@ -70,7 +70,15 @@ function ChatRow({
       testID={`chat-${partner?.displayName}`}
     >
       {partner?.photoUrl ? (
-        <Image source={{ uri: partner.photoUrl }} style={styles.avatar} />
+        <Image
+          source={{
+            uri:
+              !partner.photoUrl.startsWith('http') && !partner.photoUrl.startsWith('data:')
+                ? `data:image/jpeg;base64,${partner.photoUrl}`
+                : partner.photoUrl,
+          }}
+          style={styles.avatar}
+        />
       ) : (
         <View style={[styles.avatar, styles.avatarPlaceholder]}>
           <Text style={styles.avatarPlaceholderText}>

@@ -51,7 +51,10 @@ async function fetchPartnerPhotosFromMatches(authHeader: string): Promise<Map<st
       const partner = match.partner;
       if (!partner?.id || !partner.photos?.length) continue;
       const sorted = [...partner.photos].sort((a: any, b: any) => a.displayOrder - b.displayOrder);
-      const primaryPhoto = sorted[0]?.photoData;
+      const rawPhoto = sorted[0]?.photoData;
+      const primaryPhoto = rawPhoto && !rawPhoto.startsWith('http') && !rawPhoto.startsWith('data:')
+        ? `data:image/jpeg;base64,${rawPhoto}`
+        : rawPhoto;
       if (primaryPhoto) {
         photoMap.set(partner.id, primaryPhoto);
         partnerPhotoCache.set(partner.id, { photoData: primaryPhoto, expiresAt: Date.now() + PHOTO_CACHE_TTL_MS });
