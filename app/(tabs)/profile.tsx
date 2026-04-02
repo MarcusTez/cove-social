@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Switch,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LineLoader from "@/components/LineLoader";
@@ -528,6 +529,33 @@ export default function MyProfileScreen() {
     },
   });
 
+  const { data: introductionsData } = useQuery<{ active: boolean }>({
+    queryKey: ["/api/mobile/introductions"],
+  });
+
+  const introductionsMutation = useMutation({
+    mutationFn: async (active: boolean) => {
+      const res = await apiRequest("PATCH", "/api/mobile/introductions", { active });
+      return res.json();
+    },
+    onMutate: async (active: boolean) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/mobile/introductions"] });
+      const previous = queryClient.getQueryData<{ active: boolean }>(["/api/mobile/introductions"]);
+      queryClient.setQueryData(["/api/mobile/introductions"], { active });
+      return { previous };
+    },
+    onError: (_err, _active, context: any) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(["/api/mobile/introductions"], context.previous);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mobile/introductions"] });
+    },
+  });
+
+  const introductionsActive = introductionsData?.active ?? false;
+
   const handleSave = useCallback(async (field: DisplayField, value: string | string[]) => {
     const body = mapFieldToApiBody(field, value, apiProfile);
     if (Object.keys(body).length === 0) return;
@@ -788,6 +816,26 @@ export default function MyProfileScreen() {
               )
             )}
           </ScrollView>
+
+          <View style={styles.divider} />
+
+          <View style={styles.introductionsRow}>
+            <View style={styles.introductionsLeft}>
+              <Text style={styles.introductionsLabel}>Introductions</Text>
+              <Text style={styles.introductionsSubtitle}>Receive a new introduction each week</Text>
+            </View>
+            <View style={styles.introductionsRight}>
+              <Text style={styles.introductionsActive}>Active</Text>
+              <Switch
+                value={introductionsActive}
+                onValueChange={(value) => introductionsMutation.mutate(value)}
+                disabled={introductionsMutation.isPending}
+                trackColor={{ false: "#d4d4d4", true: "#171717" }}
+                thumbColor="#ffffff"
+                testID="introductions-toggle"
+              />
+            </View>
+          </View>
 
           <View style={styles.divider} />
 
@@ -1296,5 +1344,35 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     fontSize: 16,
     color: "#171717",
+  },
+  introductionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  introductionsLeft: {
+    flex: 1,
+    marginRight: 12,
+  },
+  introductionsLabel: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    color: "#171717",
+    marginBottom: 2,
+  },
+  introductionsSubtitle: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "#737373",
+  },
+  introductionsRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  introductionsActive: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    color: "#737373",
   },
 });
