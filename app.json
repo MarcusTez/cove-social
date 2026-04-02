@@ -24,6 +24,7 @@
       }
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "package": "com.cove.app",
       "adaptiveIcon": {
         "backgroundColor": "#FAF8F3",
