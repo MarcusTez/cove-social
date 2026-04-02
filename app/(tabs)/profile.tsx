@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
-  Switch,
+  Animated,
+  Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import LineLoader from "@/components/LineLoader";
@@ -454,6 +455,34 @@ function TextItem({ text }: { text: string }) {
   return <Text style={styles.itemText}>{text}</Text>;
 }
 
+function useToggleAnim(value: boolean) {
+  const ref = useRef<Animated.Value | null>(null);
+  if (ref.current === null) {
+    ref.current = new Animated.Value(value ? 1 : 0);
+  }
+  useEffect(() => {
+    Animated.timing(ref.current!, { toValue: value ? 1 : 0, duration: 200, useNativeDriver: false }).start();
+  }, [value]);
+  return ref.current;
+}
+
+function CustomToggle({ value, onValueChange, disabled, testID }: { value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean; testID?: string }) {
+  const anim = useToggleAnim(value);
+  const toggle = () => {
+    if (disabled) return;
+    onValueChange(!value);
+  };
+  const trackBg = anim.interpolate({ inputRange: [0, 1], outputRange: ["#d4d4d4", "#171717"] });
+  const thumbLeft = anim.interpolate({ inputRange: [0, 1], outputRange: [2, 22] });
+  return (
+    <Pressable onPress={toggle} testID={testID} style={{ opacity: disabled ? 0.5 : 1 }}>
+      <Animated.View style={{ width: 51, height: 31, borderRadius: 15.5, backgroundColor: trackBg, justifyContent: "center" }}>
+        <Animated.View style={{ position: "absolute", left: thumbLeft, width: 27, height: 27, borderRadius: 13.5, backgroundColor: "#ffffff", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 2 }} />
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 export default function MyProfileScreen() {
   const insets = useSafeAreaInsets();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
@@ -825,13 +854,11 @@ export default function MyProfileScreen() {
               <Text style={styles.introductionsSubtitle}>Receive a new introduction each week</Text>
             </View>
             <View style={styles.introductionsRight}>
-              <Text style={styles.introductionsActive}>Active</Text>
-              <Switch
+              <Text style={styles.introductionsActive}>{introductionsActive ? "Active" : "Paused"}</Text>
+              <CustomToggle
                 value={introductionsActive}
                 onValueChange={(value) => introductionsMutation.mutate(value)}
                 disabled={introductionsMutation.isPending}
-                trackColor={{ false: "#d4d4d4", true: "#171717" }}
-                thumbColor="#ffffff"
                 testID="introductions-toggle"
               />
             </View>

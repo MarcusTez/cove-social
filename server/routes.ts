@@ -452,6 +452,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/mobile/blocks", proxyToCove);
   app.get("/api/mobile/matching-preferences", proxyToCove);
   app.put("/api/mobile/matching-preferences", proxyToCove);
+  app.get("/api/mobile/introductions", proxyToCove);
+  app.patch("/api/mobile/introductions", proxyToCove);
   app.get("/api/mobile/subscription", proxyToCove);
   app.get("/api/mobile/events", proxyToCove);
   app.get("/api/mobile/events/:id", proxyToCove);
