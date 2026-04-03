@@ -469,7 +469,7 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
           <TouchableOpacity onPress={() => setDeleteStep("warning")} activeOpacity={0.6}>
             <Text style={styles.footerDeleteText}>Delete account</Text>
           </TouchableOpacity>
-          <Text style={styles.versionText}>v1.1.7</Text>
+          <Text style={styles.versionText}>v1.1.8</Text>
         </ScrollView>
       </View>
     </Modal>
