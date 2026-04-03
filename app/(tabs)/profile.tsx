@@ -851,7 +851,7 @@ export default function MyProfileScreen() {
           <View style={styles.introductionsRow}>
             <View style={styles.introductionsLeft}>
               <Text style={styles.introductionsLabel}>Introductions</Text>
-              <Text style={styles.introductionsSubtitle}>Receive a new introduction each week</Text>
+              <Text style={styles.introductionsSubtitle}>Receive a new introductions each week</Text>
             </View>
             <View style={styles.introductionsRight}>
               <Text style={styles.introductionsActive}>{introductionsActive ? "Active" : "Paused"}</Text>
