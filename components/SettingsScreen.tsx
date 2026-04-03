@@ -442,7 +442,7 @@ export function SettingsScreen({ visible, onClose, subscriptionStatus }: Setting
           <View style={styles.sectionSpacer} />
           <Text style={styles.sectionTitle}>Safety</Text>
 
-          <SettingsRow label="Community guidelines" onPress={() => {}} />
+          <SettingsRow label="Community guidelines" onPress={() => Linking.openURL("https://cove-social.com/community-safety")} />
           <View style={styles.divider} />
 
           <SettingsRow label="Contact support" onPress={() => openForm("contact")} />
