@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.cove",
+      "bundleIdentifier": "app.markyttech.cove",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       },
