@@ -52,22 +52,16 @@ export function groupEventsByDate(events: ApiEvent[]): ApiEventSection[] {
   const now = new Date();
   const today = startOfDay(now);
 
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
   const dayOfWeek = today.getDay();
-  const daysUntilSunday = dayOfWeek === 0 ? 7 : 7 - dayOfWeek;
+  const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
   const endOfWeek = new Date(today);
   endOfWeek.setDate(endOfWeek.getDate() + daysUntilSunday);
 
-  const endOfNextWeek = new Date(endOfWeek);
-  endOfNextWeek.setDate(endOfNextWeek.getDate() + 7);
+  const startOfNextWeek = new Date(endOfWeek);
+  startOfNextWeek.setDate(startOfNextWeek.getDate() + 1);
 
   const buckets: ApiEventSection[] = [
-    { label: "Today", events: [] },
-    { label: "Tomorrow", events: [] },
     { label: "This Week", events: [] },
-    { label: "Next Week", events: [] },
     { label: "Coming Up", events: [] },
   ];
 
@@ -76,16 +70,10 @@ export function groupEventsByDate(events: ApiEvent[]): ApiEventSection[] {
 
     if (eventDay < today) continue;
 
-    if (eventDay.getTime() === today.getTime()) {
+    if (eventDay <= endOfWeek) {
       buckets[0].events.push(event);
-    } else if (eventDay.getTime() === tomorrow.getTime()) {
-      buckets[1].events.push(event);
-    } else if (eventDay <= endOfWeek) {
-      buckets[2].events.push(event);
-    } else if (eventDay <= endOfNextWeek) {
-      buckets[3].events.push(event);
     } else {
-      buckets[4].events.push(event);
+      buckets[1].events.push(event);
     }
   }
 
