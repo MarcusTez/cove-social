@@ -136,8 +136,15 @@ export default function EventsScreen() {
   });
 
   const sections = data ? groupEventsByDate(data.events) : [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const confirmedEvents = data
-    ? data.events.filter((e) => e.rsvpStatus === "confirmed")
+    ? data.events.filter((e) => {
+        if (e.rsvpStatus !== "confirmed") return false;
+        const eventDay = new Date(e.eventDatetime);
+        eventDay.setHours(0, 0, 0, 0);
+        return eventDay >= today;
+      })
     : [];
 
   const handleRefresh = () => {

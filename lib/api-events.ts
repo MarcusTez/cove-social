@@ -74,6 +74,8 @@ export function groupEventsByDate(events: ApiEvent[]): ApiEventSection[] {
   for (const event of events) {
     const eventDay = startOfDay(new Date(event.eventDatetime));
 
+    if (eventDay < today) continue;
+
     if (eventDay.getTime() === today.getTime()) {
       buckets[0].events.push(event);
     } else if (eventDay.getTime() === tomorrow.getTime()) {
