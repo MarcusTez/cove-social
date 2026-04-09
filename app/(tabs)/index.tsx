@@ -78,14 +78,6 @@ interface ProfileApiResponse {
   [key: string]: unknown;
 }
 
-function getCurrentWeekStart(): string {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(now.setDate(diff));
-  return monday.toISOString().split("T")[0];
-}
-
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -113,9 +105,20 @@ export default function HomeScreen() {
   const hasPhoto = (profileData?.photos?.length ?? 0) > 0;
 
   const matches = data?.matches ?? [];
-  const currentWeekStart = getCurrentWeekStart();
-  const currentMatches = matches.filter((m) => m.weekOf >= currentWeekStart);
-  const previousMatches = matches.filter((m) => m.weekOf < currentWeekStart);
+  const latestWeekOf = matches.length > 0
+    ? matches.reduce((max, m) => {
+        const w = (m.weekOf ?? "").split("T")[0];
+        return w > max ? w : max;
+      }, "")
+    : "";
+  const currentMatches = matches.filter((m) => {
+    const w = (m.weekOf ?? "").split("T")[0];
+    return !latestWeekOf || w >= latestWeekOf;
+  });
+  const previousMatches = matches.filter((m) => {
+    const w = (m.weekOf ?? "").split("T")[0];
+    return latestWeekOf && w < latestWeekOf;
+  });
   const hasIntroductions = matches.length > 0;
 
   const handleMessage = async (matchId: string) => {
