@@ -151,7 +151,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           const data = await res.json();
           setAccessToken(data.accessToken);
-          await storeRefreshToken(data.refreshToken);
+          if (data.refreshToken) {
+            await storeRefreshToken(data.refreshToken);
+          }
           return true;
         } catch {
           const delay = REFRESH_RETRY_DELAYS_MS[attempt];
