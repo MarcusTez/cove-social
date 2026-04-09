@@ -78,12 +78,21 @@ interface ProfileApiResponse {
   [key: string]: unknown;
 }
 
+function getCurrentWeekStart(): string {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+  const monday = new Date(now.setDate(diff));
+  return monday.toISOString().split("T")[0];
+}
+
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
   const [pendingMatchId, setPendingMatchId] = useState<string | null>(null);
+  const [previousExpanded, setPreviousExpanded] = useState(false);
 
   const {
     data,
@@ -104,6 +113,9 @@ export default function HomeScreen() {
   const hasPhoto = (profileData?.photos?.length ?? 0) > 0;
 
   const matches = data?.matches ?? [];
+  const currentWeekStart = getCurrentWeekStart();
+  const currentMatches = matches.filter((m) => m.weekOf >= currentWeekStart);
+  const previousMatches = matches.filter((m) => m.weekOf < currentWeekStart);
   const hasIntroductions = matches.length > 0;
 
   const handleMessage = async (matchId: string) => {
@@ -234,7 +246,7 @@ export default function HomeScreen() {
           </Text>
 
           <View style={styles.cardsContainer}>
-            {matches.map((match) => {
+            {currentMatches.map((match) => {
               const partner = match.partner;
               const firstPhoto = partner.photos?.length
                 ? [...partner.photos].sort((a, b) => a.displayOrder - b.displayOrder)[0]
@@ -259,6 +271,49 @@ export default function HomeScreen() {
               );
             })}
           </View>
+
+          {previousMatches.length > 0 && (
+            <View style={styles.previousSection}>
+              <TouchableOpacity
+                style={styles.previousHeader}
+                onPress={() => setPreviousExpanded((v) => !v)}
+                activeOpacity={0.7}
+                testID="previous-introductions-toggle"
+              >
+                <Text style={styles.previousHeaderText}>Previous Introductions</Text>
+                <Text style={[styles.previousArrow, previousExpanded && styles.previousArrowUp]}>↓</Text>
+              </TouchableOpacity>
+
+              {previousExpanded && (
+                <View style={styles.previousCards}>
+                  {previousMatches.map((match) => {
+                    const partner = match.partner;
+                    const firstPhoto = partner.photos?.length
+                      ? [...partner.photos].sort((a, b) => a.displayOrder - b.displayOrder)[0]
+                      : undefined;
+                    const sortedPrompts = partner.prompts?.length
+                      ? [...partner.prompts].sort((a, b) => a.displayOrder - b.displayOrder)
+                      : [];
+                    return (
+                      <ProfileCard
+                        key={match.id}
+                        name={partner.firstName}
+                        photoUrl={firstPhoto?.photoData}
+                        location="London"
+                        thisWeekActivities={partner.thisWeekActivities}
+                        regularRituals={partner.regularRituals}
+                        prompts={sortedPrompts}
+                        overlapTags={match.overlapTags}
+                        onMessage={() => handleMessage(match.id)}
+                        onViewProfile={() => handleViewProfile(match.id)}
+                        messageLoading={pendingMatchId === match.id}
+                      />
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          )}
 
           <View style={styles.footer}>
             <Text style={styles.footerTitle}>
@@ -320,6 +375,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#737373",
     lineHeight: 24,
+  },
+  previousSection: {
+    marginBottom: 24,
+  },
+  previousHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+  },
+  previousHeaderText: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 16,
+    color: "#171717",
+  },
+  previousArrow: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 18,
+    color: "#171717",
+  },
+  previousArrowUp: {
+    transform: [{ rotate: "180deg" }],
+  },
+  previousCards: {
+    gap: 16,
+    marginTop: 12,
   },
   emptyContainer: {
     flex: 1,
