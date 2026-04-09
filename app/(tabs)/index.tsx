@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#ffffff",
+    backgroundColor: "#F9F9F7",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#e5e5e5",
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
   },
   previousHeaderText: {
-    fontFamily: "Inter_500Medium",
+    fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 16,
     color: "#171717",
   },
